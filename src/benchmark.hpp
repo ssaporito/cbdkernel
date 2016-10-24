@@ -11,6 +11,5 @@ void search_range_raw(const Schema &schema, int lowkey, int highkey, const std::
 void search_set(const Schema &schema, std::vector<int> set);
 void search_set_bplus(const Schema &schema, std::vector<int> set);
 void search_set_raw(const Schema &schema, std::vector<int> set, const std::string &filename);
-
 #endif // !BENCHMARK_H
 

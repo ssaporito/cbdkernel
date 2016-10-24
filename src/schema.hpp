@@ -32,7 +32,11 @@ public:
     int search_for_key_indirect_hash(int key) const;
     int search_for_key_direct_hash(int key, const std::string& bin_filename) const;
     int search_for_key_raw(int key, const std::string& bin_filename) const;
-    
+    void join_existing_index(const Schema &schema2);
+    void join_new_index(const Schema &schema2);
+    void join_merge(Schema &schema2);
+    void join_hash(const Schema &schema2);
+
     static const int TIMESTAMP_SIZE = 25;
     static const int HEADER_SIZE = TIMESTAMP_SIZE * sizeof(char) + 2 * sizeof(int);
     bpt::bplus_tree *bplus = NULL;

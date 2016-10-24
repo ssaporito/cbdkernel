@@ -17,6 +17,7 @@ void usage(const char* program) {
   std::cout << "\t" << "mode: --create-index-bplus --in <.bin file> --out <.index file>" << std::endl;
   std::cout << "\t" << "mode: --search-index --in <.index file> --key <key>" << std::endl;
   std::cout << "\t" << "mode: --search-index-bplus --in <.index file> --key <key>" << std::endl;
+
   exit(EXIT_FAILURE);
 }
 
@@ -36,7 +37,12 @@ int main(int argc, char *argv[]) {
     OPERATION_CREATE_INDEX_BPLUS,
     OPERATION_SEARCH_INDEX,
     OPERATION_SEARCH_INDEX_BPLUS,
-    OPERATION_SEARCH_BENCHMARK
+    OPERATION_SEARCH_BENCHMARK,
+    OPERATION_JOIN_EXISTING_INDEX,
+    OPERATION_JOIN_NEW_INDEX,
+    OPERATION_JOIN_MERGE,
+    OPERATION_JOIN_HASH,
+    OPERATION_JOIN_BENCHMARK
   };
 
   int operation_flag = -1;
@@ -49,10 +55,15 @@ int main(int argc, char *argv[]) {
     {"search-index", no_argument, &operation_flag, OPERATION_SEARCH_INDEX},
     {"search-index-bplus", no_argument, &operation_flag, OPERATION_SEARCH_INDEX_BPLUS},
     {"search-benchmark", no_argument, &operation_flag, OPERATION_SEARCH_BENCHMARK},
+    {"join-existing-index", no_argument, &operation_flag, OPERATION_JOIN_EXISTING_INDEX},
+    {"join-new-index", no_argument, &operation_flag, OPERATION_JOIN_NEW_INDEX},
+    {"join-merge", no_argument, &operation_flag, OPERATION_JOIN_MERGE},
+    {"join-hash", no_argument, &operation_flag, OPERATION_JOIN_HASH},
 
     // Mode options.
     {"schema", required_argument, NULL, 0},
     {"schemadb", required_argument, NULL, 0},
+    {"schemadb2", optional_argument, NULL, 0},
     {"in", required_argument, NULL, 'i'},
     {"out", required_argument, NULL, 'o'},
     {"key", required_argument, NULL, 0},
@@ -68,7 +79,9 @@ int main(int argc, char *argv[]) {
   int ch;
 
   std::string schemadb_filename;
+  std::string schemadb_filename2;
   int schema_id = 0;
+  int schema_id2 = 0;
   int key = 0;
   std::string infile, outfile;
   std::string indexfile, bplusfile;
@@ -85,8 +98,14 @@ int main(int argc, char *argv[]) {
         if(!strcmp(long_options[option_index].name, "schemadb")) {
           schemadb_filename = std::string(optarg);
         }
+        if(!strcmp(long_options[option_index].name, "schemadb2")) {          
+          schemadb_filename2 = std::string(optarg);
+        }
         else if(!strcmp(long_options[option_index].name, "schema")) {
           schema_id = std::stoi(std::string(optarg));
+        }
+        else if(!strcmp(long_options[option_index].name, "schema2")) {
+          schema_id2 = std::stoi(std::string(optarg));
         }
         else if(!strcmp(long_options[option_index].name, "key")) {
           key = std::stoi(std::string(optarg));
@@ -113,6 +132,7 @@ int main(int argc, char *argv[]) {
   }
 
   SchemaDb schemadb(schemadb_filename);
+  SchemaDb schemadb2(schemadb_filename2);
   Schema schema;
 
   switch(operation_flag) {
@@ -215,10 +235,37 @@ int main(int argc, char *argv[]) {
       BENCHMARK(search_range_bplus(schema, lkey, hkey));
       std::cout << "Raw file brute force" << std::endl;
       BENCHMARK(search_range_raw(schema, lkey, hkey, "../data/schema/company.bin"));
-      std::cout << std::endl;
-      
+      std::cout << std::endl;      
+
+
+      break;
+      case OPERATION_JOIN_EXISTING_INDEX:
+      std::cout << "mode: join with existing index" << std::endl;
+      Schema schema1 = schemadb.get_schema(schema_id);
+      Schema schema2 = schemadb2.get_schema(schema_id2);
+      schema1.load_index(infile);
+      schema1.join_existing_index(schema2);
+      break;
+      case OPERATION_JOIN_NEW_INDEX:
+      std::cout << "mode: join with new index" << std::endl;
+      Schema schema1 = schemadb.get_schema(schema_id);
+      Schema schema2 = schemadb2.get_schema(schema_id2);
+      schema1.join_new_index(schema2);
+      break;
+      case OPERATION_JOIN_MERGE:
+      std::cout << "mode: join through merge" << std::endl;
+      Schema schema1 = schemadb.get_schema(schema_id);
+      Schema schema2 = schemadb2.get_schema(schema_id2);
+      schema1.join_merge(schema2);
+      break;
+      case OPERATION_JOIN_HASH:
+      std::cout << "mode: join through hash" << std::endl;
+      Schema schema1 = schemadb.get_schema(schema_id);
+      Schema schema2 = schemadb2.get_schema(schema_id2);
+      schema1.join_hash(schema2);
       break;
   }
+
 
   return EXIT_SUCCESS;
 }
