@@ -339,3 +339,21 @@ int Schema::search_for_key_raw(int key, const std::string& bin_filename) const {
     fclose(binfile);
     return -1;
 }
+
+void Schema::join_existing_index(const Schema &schema2){
+
+}
+
+void Schema::join_new_index(const Schema &schema2){
+
+}
+
+void Schema::join_merge(Schema &schema2){
+
+}
+
+void Schema::join_hash(const Schema &schema2){
+
+}
+
+

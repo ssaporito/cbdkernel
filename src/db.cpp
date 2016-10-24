@@ -133,7 +133,8 @@ int main(int argc, char *argv[]) {
 
   SchemaDb schemadb(schemadb_filename);
   SchemaDb schemadb2(schemadb_filename2);
-  Schema schema;
+  Schema schema,schema1,schema2;
+
 
   switch(operation_flag) {
     case -1:
@@ -168,6 +169,7 @@ int main(int argc, char *argv[]) {
       schema.search_for_key_bplus(key);
       break;
     case OPERATION_SEARCH_BENCHMARK:    
+      {
       std::cout << "mode: search methods benchmarking" << std::endl;
       
       std::string schemabin ("../data/schema/company.bin");
@@ -239,33 +241,43 @@ int main(int argc, char *argv[]) {
 
 
       break;
-      case OPERATION_JOIN_EXISTING_INDEX:
+      }
+    case OPERATION_JOIN_EXISTING_INDEX:
+      {
       std::cout << "mode: join with existing index" << std::endl;
-      Schema schema1 = schemadb.get_schema(schema_id);
-      Schema schema2 = schemadb2.get_schema(schema_id2);
+      schema1 = schemadb.get_schema(schema_id);
+      schema2 = schemadb2.get_schema(schema_id2);
       schema1.load_index(infile);
       schema1.join_existing_index(schema2);
       break;
-      case OPERATION_JOIN_NEW_INDEX:
+      }
+    case OPERATION_JOIN_NEW_INDEX:
+      {
       std::cout << "mode: join with new index" << std::endl;
-      Schema schema1 = schemadb.get_schema(schema_id);
-      Schema schema2 = schemadb2.get_schema(schema_id2);
+      schema1 = schemadb.get_schema(schema_id);
+      schema2 = schemadb2.get_schema(schema_id2);
       schema1.join_new_index(schema2);
       break;
-      case OPERATION_JOIN_MERGE:
+      }
+    case OPERATION_JOIN_MERGE:
+      {
       std::cout << "mode: join through merge" << std::endl;
-      Schema schema1 = schemadb.get_schema(schema_id);
-      Schema schema2 = schemadb2.get_schema(schema_id2);
+      schema1 = schemadb.get_schema(schema_id);
+      schema2 = schemadb2.get_schema(schema_id2);
       schema1.join_merge(schema2);
       break;
-      case OPERATION_JOIN_HASH:
+      }
+    case OPERATION_JOIN_HASH:
+      {
       std::cout << "mode: join through hash" << std::endl;
-      Schema schema1 = schemadb.get_schema(schema_id);
-      Schema schema2 = schemadb2.get_schema(schema_id2);
+      schema1 = schemadb.get_schema(schema_id);
+      schema2 = schemadb2.get_schema(schema_id2);
       schema1.join_hash(schema2);
       break;
+      }
   }
 
 
   return EXIT_SUCCESS;
 }
+
