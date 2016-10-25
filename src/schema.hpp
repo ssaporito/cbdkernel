@@ -36,7 +36,7 @@ public:
     void join_new_index(const Schema &schema2);
     void join_merge(Schema &schema2);
     void join_hash(const Schema &schema2);
-
+    void load_data(int pos, const std::string& bin_filename);
     static const int TIMESTAMP_SIZE = 25;
     static const int HEADER_SIZE = TIMESTAMP_SIZE * sizeof(char) + 2 * sizeof(int);
     bpt::bplus_tree *bplus = NULL;

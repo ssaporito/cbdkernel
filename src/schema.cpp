@@ -70,6 +70,22 @@ std::string Schema::get_filename() const {
     return schema_filename;
 }
 
+void Schema::load_data(int pos, const std::string& bin_filename){
+    FILE* bin_file = fopen(bin_filename.c_str(),"rb");
+    pos += ( (1+1)*sizeof(int) + TIMESTAMP_SIZE*sizeof(char) );
+    fseek(bin_file,pos,SEEK_SET);
+    std::vector<std::string> data;
+    for(auto i = 0; i < metadata.size() ; i++){
+        int string_size=atoi(metadata[i].first.substr(1).c_str());
+        fread(&data[i],sizeof(char),string_size,bin_file);
+        std::cout<<data[i]<<std::endl;
+    }
+
+    
+
+}
+
+
 void Schema::convert_to_bin(const std::string& csv_filename, const std::string& bin_filename, bool ignore_first_line) const {
     std::ifstream csv_file(csv_filename);
     FILE* bin_file = fopen(bin_filename.c_str(), "wb");

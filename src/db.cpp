@@ -160,7 +160,9 @@ int main(int argc, char *argv[]) {
       std::cout << "mode: search index" << std::endl;
       schema = schemadb.get_schema(schema_id);
       schema.load_index(infile);
-      schema.search_for_key(key);
+      int aux;
+      aux = schema.search_for_key(key);
+      std::cout<<aux<<std::endl;
       break;
     case OPERATION_SEARCH_INDEX_BPLUS:
       std::cout << "mode: search index w/ B+ tree" << std::endl;
