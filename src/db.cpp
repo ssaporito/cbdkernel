@@ -42,7 +42,8 @@ int main(int argc, char *argv[]) {
     OPERATION_JOIN_NEW_INDEX,
     OPERATION_JOIN_MERGE,
     OPERATION_JOIN_HASH,
-    OPERATION_JOIN_BENCHMARK
+    OPERATION_JOIN_BENCHMARK,
+    OPERATION_SEARCH_FIELD
   };
 
   int operation_flag = -1;
@@ -55,6 +56,7 @@ int main(int argc, char *argv[]) {
     {"search-index", no_argument, &operation_flag, OPERATION_SEARCH_INDEX},
     {"search-index-bplus", no_argument, &operation_flag, OPERATION_SEARCH_INDEX_BPLUS},
     {"search-benchmark", no_argument, &operation_flag, OPERATION_SEARCH_BENCHMARK},
+    {"search-field", no_argument, &operation_flag, OPERATION_SEARCH_FIELD},
     {"join-existing-index", no_argument, &operation_flag, OPERATION_JOIN_EXISTING_INDEX},
     {"join-new-index", no_argument, &operation_flag, OPERATION_JOIN_NEW_INDEX},
     {"join-merge", no_argument, &operation_flag, OPERATION_JOIN_MERGE},
@@ -67,6 +69,8 @@ int main(int argc, char *argv[]) {
     {"in", required_argument, NULL, 'i'},
     {"out", required_argument, NULL, 'o'},
     {"key", required_argument, NULL, 0},
+    {"field_name", optional_argument, NULL, 0},
+    {"field_value", optional_argument, NULL, 0},
     {"indexfile", optional_argument, NULL, 0},
     {"bplusfile", optional_argument, NULL, 0},
 
@@ -83,6 +87,7 @@ int main(int argc, char *argv[]) {
   int schema_id = 0;
   int schema_id2 = 0;
   int key = 0;
+  std::string field_name, field_value;
   std::string infile, outfile;
   std::string indexfile, bplusfile;
 
@@ -109,6 +114,12 @@ int main(int argc, char *argv[]) {
         }
         else if(!strcmp(long_options[option_index].name, "key")) {
           key = std::stoi(std::string(optarg));
+        }
+        else if(!strcmp(long_options[option_index].name, "field_name")) {
+          field_name = std::string(optarg);
+        }
+        else if(!strcmp(long_options[option_index].name, "field_value")) {
+          field_value = std::string(optarg);
         }
         else if(!strcmp(long_options[option_index].name, "indexfile")) {
           indexfile = std::string(optarg);
@@ -169,6 +180,11 @@ int main(int argc, char *argv[]) {
       schema = schemadb.get_schema(schema_id);
       schema.load_index_bplus(infile);
       schema.search_for_key_bplus(key);
+      break;
+    case OPERATION_SEARCH_FIELD:
+      std::cout << "mode: search field" << std::endl;
+      schema = schemadb.get_schema(schema_id);
+      schema.search_field(field_name, field_value, infile);
       break;
     case OPERATION_SEARCH_BENCHMARK:    
       {

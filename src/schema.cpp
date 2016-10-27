@@ -70,22 +70,6 @@ std::string Schema::get_filename() const {
     return schema_filename;
 }
 
-void Schema::load_data(int pos, const std::string& bin_filename){
-    FILE* bin_file = fopen(bin_filename.c_str(),"rb");
-    pos += ( (1+1)*sizeof(int) + TIMESTAMP_SIZE*sizeof(char) );
-    fseek(bin_file,pos,SEEK_SET);
-    std::vector<std::string> data;
-    for(auto i = 0; i < metadata.size() ; i++){
-        int string_size=atoi(metadata[i].first.substr(1).c_str());
-        fread(&data[i],sizeof(char),string_size,bin_file);
-        std::cout<<data[i]<<std::endl;
-    }
-
-    
-
-}
-
-
 void Schema::convert_to_bin(const std::string& csv_filename, const std::string& bin_filename, bool ignore_first_line) const {
     std::ifstream csv_file(csv_filename);
     FILE* bin_file = fopen(bin_filename.c_str(), "wb");
@@ -285,6 +269,50 @@ void Schema::load_index_indirect_hash(const std::string& index_filename) {
 }
 
 
+void Schema::load_data(int pos, const std::string& bin_filename){
+    FILE* bin_file = fopen(bin_filename.c_str(),"rb");
+    pos += ( (1+1)*sizeof(int) + TIMESTAMP_SIZE*sizeof(char) );
+    fseek(bin_file,pos,SEEK_SET);
+    std::vector<std::string> data;
+    for(unsigned i = 0; i < metadata.size() ; i++){
+        int string_size=atoi(metadata[i].first.substr(1).c_str());
+        fread(&data[i],sizeof(char),string_size,bin_file);
+        std::cout<<data[i]<<std::endl;
+    }
+}
+
+int Schema::search_field(std::string field_name, std::string field_value, const std::string& bin_filename) const{
+    FILE* binfile = fopen(bin_filename.c_str(), "rb");
+    
+    int string_size;
+    int pos = 0;
+    int row_pos;
+
+
+    while(!feof(binfile)) {
+        row_pos = pos;
+
+        //Jump the header
+        pos += ( (1+1)*sizeof(int) + TIMESTAMP_SIZE*sizeof(char) );
+        fseek(binfile,pos,SEEK_SET);
+        std::vector<std::string> data;
+
+        for(unsigned i = 0; i < metadata.size() ; i++){
+            if (metadata[i].second == field_name){
+                int string_size=atoi(metadata[i].first.substr(1).c_str());
+                fread(&data[i],sizeof(char),string_size+1,binfile);
+                // if (data[i] == field_value){
+                //     fclose(binfile);
+                //     return row_pos;
+                // }
+            }
+        }
+    }
+
+    fclose(binfile);
+    return -1;
+}
+
 int Schema::search_for_key(int key) const {
     auto it = std::lower_bound(index_map.begin(), index_map.end(), std::make_pair(key, 0), [](const std::pair<int, int>& op1, const std::pair<int, int>& op2) {
         return op1.first < op2.first;
@@ -315,7 +343,6 @@ int Schema::search_for_key_direct_hash(int key, const std::string& bin_filename)
 
     FILE* binfile = fopen(bin_filename.c_str(), "rb");
 
-    int pace = HEADER_SIZE + size - sizeof(int);
     int k;
 
     //find record

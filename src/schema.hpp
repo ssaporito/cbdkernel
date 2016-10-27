@@ -32,6 +32,7 @@ public:
     int search_for_key_indirect_hash(int key) const;
     int search_for_key_direct_hash(int key, const std::string& bin_filename) const;
     int search_for_key_raw(int key, const std::string& bin_filename) const;
+    int search_field(std::string field_name, std::string field_value, const std::string& bin_filename) const;
     void join_existing_index(const Schema &schema2);
     void join_new_index(const Schema &schema2);
     void join_merge(Schema &schema2);
