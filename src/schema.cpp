@@ -273,12 +273,16 @@ void Schema::load_data(int pos, const std::string& bin_filename){
     FILE* bin_file = fopen(bin_filename.c_str(),"rb");
     pos += ( (1+1)*sizeof(int) + TIMESTAMP_SIZE*sizeof(char) );
     fseek(bin_file,pos,SEEK_SET);
-    std::vector<std::string> data;
+    std::vector<char*> data;
     for(unsigned i = 0; i < metadata.size() ; i++){
         int string_size=atoi(metadata[i].first.substr(1).c_str());
-        fread(&data[i],sizeof(char),string_size,bin_file);
+        char* data_value=(char*)malloc(sizeof(char)*string_size);
+        data.push_back(data_value);
+        fread(data[i],sizeof(char),string_size,bin_file);
         std::cout<<data[i]<<std::endl;
+        //std::cout<<pos<<std::endl;
     }
+    fclose(bin_file);
 }
 
 int Schema::search_field(std::string field_name, std::string field_value, const std::string& bin_filename) const{
@@ -295,17 +299,23 @@ int Schema::search_field(std::string field_name, std::string field_value, const 
         //Jump the header
         pos += ( (1+1)*sizeof(int) + TIMESTAMP_SIZE*sizeof(char) );
         fseek(binfile,pos,SEEK_SET);
-        std::vector<std::string> data;
+        std::vector<char*> data;
 
         for(unsigned i = 0; i < metadata.size() ; i++){
             if (metadata[i].second == field_name){
                 int string_size=atoi(metadata[i].first.substr(1).c_str());
-                fread(&data[i],sizeof(char),string_size+1,binfile);
-                // if (data[i] == field_value){
+                char* data_value=(char*)malloc(sizeof(char)*string_size);
+                data.push_back(data_value);
+                fread(data[i],sizeof(char),string_size,binfile);
+                std::cout<<data[i]<<std::endl;
+                std::cout<<pos<<std::endl;
+                if (data[i] == field_value){
+                    std::cout<<"OMG"<<std::endl;
                 //     fclose(binfile);
-                //     return row_pos;
-                // }
+                    return row_pos;
+                }
             }
+
         }
     }
 

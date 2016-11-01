@@ -35,6 +35,7 @@ int main(int argc, char *argv[]) {
     OPERATION_CONVERT,
     OPERATION_CREATE_INDEX,
     OPERATION_CREATE_INDEX_BPLUS,
+    OPERATION_LOAD_DATA,
     OPERATION_SEARCH_INDEX,
     OPERATION_SEARCH_INDEX_BPLUS,
     OPERATION_SEARCH_BENCHMARK,
@@ -57,6 +58,7 @@ int main(int argc, char *argv[]) {
     {"search-index-bplus", no_argument, &operation_flag, OPERATION_SEARCH_INDEX_BPLUS},
     {"search-benchmark", no_argument, &operation_flag, OPERATION_SEARCH_BENCHMARK},
     {"search-field", no_argument, &operation_flag, OPERATION_SEARCH_FIELD},
+    {"load-data", no_argument, &operation_flag, OPERATION_LOAD_DATA},
     {"join-existing-index", no_argument, &operation_flag, OPERATION_JOIN_EXISTING_INDEX},
     {"join-new-index", no_argument, &operation_flag, OPERATION_JOIN_NEW_INDEX},
     {"join-merge", no_argument, &operation_flag, OPERATION_JOIN_MERGE},
@@ -69,6 +71,7 @@ int main(int argc, char *argv[]) {
     {"in", required_argument, NULL, 'i'},
     {"out", required_argument, NULL, 'o'},
     {"key", required_argument, NULL, 0},
+    {"pos",required_argument,NULL,0},
     {"field_name", optional_argument, NULL, 0},
     {"field_value", optional_argument, NULL, 0},
     {"indexfile", optional_argument, NULL, 0},
@@ -87,6 +90,7 @@ int main(int argc, char *argv[]) {
   int schema_id = 0;
   int schema_id2 = 0;
   int key = 0;
+  int pos=0;
   std::string field_name, field_value;
   std::string infile, outfile;
   std::string indexfile, bplusfile;
@@ -108,6 +112,9 @@ int main(int argc, char *argv[]) {
         }
         else if(!strcmp(long_options[option_index].name, "schema")) {
           schema_id = std::stoi(std::string(optarg));
+        }
+        else if(!strcmp(long_options[option_index].name, "pos")) {
+          pos = std::stoi(std::string(optarg));
         }
         else if(!strcmp(long_options[option_index].name, "schema2")) {
           schema_id2 = std::stoi(std::string(optarg));
@@ -166,6 +173,15 @@ int main(int argc, char *argv[]) {
       std::cout << "mode: create index w/ B+ tree" << std::endl;
       schema = schemadb.get_schema(schema_id);
       schema.create_index_bplus(infile, outfile);
+      break;
+    case OPERATION_LOAD_DATA:
+      std::cout << "mode: load data" << std::endl;
+      schema = schemadb.get_schema(schema_id);
+      for(int i=0;i<10;i++){
+        schema.load_data(pos,infile);
+        pos+=schema.get_size();     
+      }
+      //schema.load_data(pos, infile);
       break;
     case OPERATION_SEARCH_INDEX:
       std::cout << "mode: search index" << std::endl;

@@ -1,4 +1,4 @@
-CXXFLAGS = -Wall -Wextra -Wno-unused-parameter -O2 -std=c++11
+CXXFLAGS = -Wall -Wextra -Wno-unused-parameter -std=c++11
 SOURCES=$(wildcard *.cpp)
 OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=db
