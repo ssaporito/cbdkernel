@@ -29,7 +29,7 @@ Imprimir todos os registros:
 1. TODO
   - [x] Função de ler os dados (load_data)  
   - [x] Testar load_data
-  - [ ] Joins Functions
+  - [ ] Joins (natural inner, natural left, natural right, natural full)
   - - [ ] Nested join with existing index
   - - [ ] Nested join with new index
   - - [ ] Merge join
