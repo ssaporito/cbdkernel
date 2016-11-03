@@ -88,7 +88,6 @@ void Schema::convert_to_bin(const std::string& csv_filename, const std::string& 
         fwrite(&next_key, sizeof(int), 1, bin_file);
         fwrite(timestamp.c_str(), sizeof(char), TIMESTAMP_SIZE, bin_file);
         fwrite(&id, sizeof(int), 1, bin_file);
-
         ++next_key;
 
         // Write data.
@@ -102,6 +101,7 @@ void Schema::convert_to_bin(const std::string& csv_filename, const std::string& 
             if (data.first[0] == 'i') {
                 const int int_token = std::stoi(token);
                 fwrite(&int_token, sizeof(int), 1, bin_file);
+                std::cout<<int_token<<std::endl;
             }
             else {
                 // ASSUMES: string.
@@ -280,20 +280,24 @@ void Schema::load_data(int pos, const std::string& bin_filename){
         data.push_back(data_value);
         fread(data[i],sizeof(char),string_size,bin_file);
         std::cout<<data[i]<<std::endl;
-        //std::cout<<pos<<std::endl;
+        pos+=string_size;
     }
     fclose(bin_file);
 }
 
-int Schema::search_field(std::string field_name, std::string field_value, const std::string& bin_filename) const{
+std::vector<int> Schema::search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos = 0) const{
     FILE* binfile = fopen(bin_filename.c_str(), "rb");
     
     int string_size;
-    int pos = 0;
+    int pos = init_pos;
     int row_pos;
+    int file_size;
+    std::vector<int> pos_vec;
 
+    fseek(binfile,0,SEEK_END);
+    file_size = ftell(binfile);
 
-    while(!feof(binfile)) {
+    while(file_size > pos) {
         row_pos = pos;
 
         //Jump the header
@@ -302,25 +306,23 @@ int Schema::search_field(std::string field_name, std::string field_value, const 
         std::vector<char*> data;
 
         for(unsigned i = 0; i < metadata.size() ; i++){
+            int string_size=atoi(metadata[i].first.substr(1).c_str());
             if (metadata[i].second == field_name){
-                int string_size=atoi(metadata[i].first.substr(1).c_str());
                 char* data_value=(char*)malloc(sizeof(char)*string_size);
                 data.push_back(data_value);
-                fread(data[i],sizeof(char),string_size,binfile);
-                std::cout<<data[i]<<std::endl;
-                std::cout<<pos<<std::endl;
-                if (data[i] == field_value){
-                    std::cout<<"OMG"<<std::endl;
-                //     fclose(binfile);
-                    return row_pos;
+                fread(data[0],sizeof(char),string_size,binfile);
+                if (data[0] == field_value){
+                    //std::cout<<data[0]<<row_pos<<std::endl;
+                    pos_vec.push_back(row_pos);
                 }
             }
-
+            pos += string_size;
+            fseek(binfile,pos,SEEK_SET);
         }
     }
 
     fclose(binfile);
-    return -1;
+    return pos_vec;
 }
 
 int Schema::search_for_key(int key) const {

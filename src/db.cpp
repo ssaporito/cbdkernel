@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
     {"out", required_argument, NULL, 'o'},
     {"key", required_argument, NULL, 0},
     {"pos",required_argument,NULL,0},
+    {"init_pos", optional_argument,NULL, 0},
     {"field_name", optional_argument, NULL, 0},
     {"field_value", optional_argument, NULL, 0},
     {"indexfile", optional_argument, NULL, 0},
@@ -91,6 +92,7 @@ int main(int argc, char *argv[]) {
   int schema_id2 = 0;
   int key = 0;
   int pos=0;
+  int init_pos = 0;
   std::string field_name, field_value;
   std::string infile, outfile;
   std::string indexfile, bplusfile;
@@ -115,6 +117,9 @@ int main(int argc, char *argv[]) {
         }
         else if(!strcmp(long_options[option_index].name, "pos")) {
           pos = std::stoi(std::string(optarg));
+        }
+        else if(!strcmp(long_options[option_index].name, "init_pos")) {
+          init_pos = std::stoi(std::string(optarg));
         }
         else if(!strcmp(long_options[option_index].name, "schema2")) {
           schema_id2 = std::stoi(std::string(optarg));
@@ -177,9 +182,9 @@ int main(int argc, char *argv[]) {
     case OPERATION_LOAD_DATA:
       std::cout << "mode: load data" << std::endl;
       schema = schemadb.get_schema(schema_id);
-      for(int i=0;i<10;i++){
+      for(int i=0;i<100;i++){
         schema.load_data(pos,infile);
-        pos+=schema.get_size();     
+        pos+=333;     
       }
       //schema.load_data(pos, infile);
       break;
@@ -197,11 +202,14 @@ int main(int argc, char *argv[]) {
       schema.load_index_bplus(infile);
       schema.search_for_key_bplus(key);
       break;
-    case OPERATION_SEARCH_FIELD:
+    case OPERATION_SEARCH_FIELD:{
       std::cout << "mode: search field" << std::endl;
       schema = schemadb.get_schema(schema_id);
-      schema.search_field(field_name, field_value, infile);
-      break;
+      std::vector<int> row_vec = schema.search_field(field_name, field_value, infile, init_pos);
+      for (int i=0; i<row_vec.size(); i++){
+        schema.load_data(row_vec[i],infile);
+      }
+      break;}
     case OPERATION_SEARCH_BENCHMARK:    
       {
       std::cout << "mode: search methods benchmarking" << std::endl;
