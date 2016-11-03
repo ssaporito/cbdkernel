@@ -76,6 +76,16 @@ int Schema::get_id() const {
     return id;
 }
 
+std::vector< std::pair<std::string, std::string> > Schema::get_metadata(){
+    return metadata;
+}
+std::vector<std::pair<int, int> > Schema::get_index_map(){
+    return index_map;
+}
+std::unordered_map<std::size_t*,int> Schema::get_index_hash(){
+    return index_hash;
+}
+
 std::string Schema::get_filename() const {
     return schema_filename;
 }
@@ -437,21 +447,131 @@ int Schema::search_for_key_raw(int key, const std::string& bin_filename) const {
     fclose(binfile);
     return -1;
 }
+void Schema::join_natural_inner(Schema &schema2,Join_Conditions jc){
+    switch(jc.type){
+        case NESTED:{
+            FILE* rel1 = fopen(jc.rel1_filename.c_str(), "rb");
+            FILE* rel2 = fopen(jc.rel2_filename.c_str(), "rb");
+                                            
+            std::vector<int> pos_vec;
 
-void Schema::join_existing_index(const Schema &schema2){
+            fseek(rel1,0,SEEK_SET);
+            fseek(rel2,0,SEEK_SET);
 
+            while(!feof(rel1)) {
+                while(!feof(rel2)){
+                    /*row_pos = pos;
+
+                    //Jump the header
+                    pos += get_header_size();
+                    fseek(binfile,pos,SEEK_SET);
+                    std::vector<char*> data;
+
+                    for(unsigned i = 0; i < metadata.size() ; i++){
+                        string_size=atoi(metadata[i].first.c_str()+1);
+                        if (metadata[i].second == field_name){
+                            char* data_value=(char*)malloc(sizeof(char)*string_size);
+                            data.push_back(data_value);
+                            fread(data[0],sizeof(char),string_size,binfile);
+                            if (data[0] == field_value){
+                                //std::cout<<data[0]<<row_pos<<std::endl;
+                                pos_vec.push_back(row_pos);
+                            }
+                        }
+                        pos += string_size;
+                        //fseek(binfile,pos,SEEK_SET);
+                    } */
+                }
+            }
+            fclose(rel1); 
+            fclose(rel2);
+            break;
+        }
+        case NESTED_EXISTING_INDEX:{
+            break;
+        }
+        case NESTED_NEW_INDEX:{
+            break;
+        }
+        case MERGE:{
+            break;
+        }
+        case HASH:{
+            break;
+        }
+        default:{
+            break;
+        }
+    }
 }
 
-void Schema::join_new_index(const Schema &schema2){
-
+void Schema::join_natural_left(Schema &schema2,Join_Conditions jc){
+    switch(jc.type){
+        case NESTED:{
+            break;
+        }
+        case NESTED_EXISTING_INDEX:{
+            break;
+        }
+        case NESTED_NEW_INDEX:{
+            break;
+        }
+        case MERGE:{
+            break;
+        }
+        case HASH:{
+            break;
+        }
+        default:{
+            break;
+        }
+    }
 }
 
-void Schema::join_merge(Schema &schema2){
-
+void Schema::join_natural_right(Schema &schema2,Join_Conditions jc){
+    switch(jc.type){
+        case NESTED:{
+            break;
+        }
+        case NESTED_EXISTING_INDEX:{
+            break;
+        }
+        case NESTED_NEW_INDEX:{
+            break;
+        }
+        case MERGE:{
+            break;
+        }
+        case HASH:{
+            break;
+        }
+        default:{
+            break;
+        }
+    }
 }
 
-void Schema::join_hash(const Schema &schema2){
-
+void Schema::join_natural_full(Schema &schema2,Join_Conditions jc){
+    switch(jc.type){
+        case NESTED:{
+            break;
+        }
+        case NESTED_EXISTING_INDEX:{
+            break;
+        }
+        case NESTED_NEW_INDEX:{
+            break;
+        }
+        case MERGE:{
+            break;
+        }
+        case HASH:{
+            break;
+        }
+        default:{
+            break;
+        }
+    }
 }
 
 

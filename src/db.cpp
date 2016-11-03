@@ -40,10 +40,10 @@ int main(int argc, char *argv[]) {
     OPERATION_SEARCH_INDEX,
     OPERATION_SEARCH_INDEX_BPLUS,
     OPERATION_SEARCH_BENCHMARK,
-    OPERATION_JOIN_EXISTING_INDEX,
-    OPERATION_JOIN_NEW_INDEX,
-    OPERATION_JOIN_MERGE,
-    OPERATION_JOIN_HASH,
+    OPERATION_JOIN_NATURAL_INNER,
+    OPERATION_JOIN_NATURAL_LEFT,
+    OPERATION_JOIN_NATURAL_RIGHT,
+    OPERATION_JOIN_NATURAL_FULL,
     OPERATION_JOIN_BENCHMARK,
     OPERATION_SEARCH_FIELD
   };
@@ -61,16 +61,17 @@ int main(int argc, char *argv[]) {
     {"search-benchmark", no_argument, &operation_flag, OPERATION_SEARCH_BENCHMARK},
     {"search-field", no_argument, &operation_flag, OPERATION_SEARCH_FIELD},
     {"load-data", no_argument, &operation_flag, OPERATION_LOAD_DATA},
-    {"join-existing-index", no_argument, &operation_flag, OPERATION_JOIN_EXISTING_INDEX},
-    {"join-new-index", no_argument, &operation_flag, OPERATION_JOIN_NEW_INDEX},
-    {"join-merge", no_argument, &operation_flag, OPERATION_JOIN_MERGE},
-    {"join-hash", no_argument, &operation_flag, OPERATION_JOIN_HASH},
+    {"join-natural-inner", no_argument, &operation_flag, OPERATION_JOIN_NATURAL_INNER},
+    {"join-natural-left", no_argument, &operation_flag, OPERATION_JOIN_NATURAL_LEFT},
+    {"join-natural-right", no_argument, &operation_flag, OPERATION_JOIN_NATURAL_RIGHT},
+    {"join-natural-full", no_argument, &operation_flag, OPERATION_JOIN_NATURAL_FULL},
 
     // Mode options.
     {"schema", required_argument, NULL, 0},
+    {"schema2", optional_argument, NULL, 0},
     {"schemadb", required_argument, NULL, 0},
-    {"schemadb2", optional_argument, NULL, 0},
     {"in", required_argument, NULL, 'i'},
+    {"in2", optional_argument, NULL, 0},    
     {"out", required_argument, NULL, 'o'},
     {"key", required_argument, NULL, 0},
     {"pos",required_argument,NULL,0},
@@ -78,6 +79,7 @@ int main(int argc, char *argv[]) {
     {"field_name", optional_argument, NULL, 0},
     {"field_value", optional_argument, NULL, 0},
     {"indexfile", optional_argument, NULL, 0},
+    {"indexfile2", optional_argument, NULL, 0},
     {"bplusfile", optional_argument, NULL, 0},
 
 
@@ -88,16 +90,15 @@ int main(int argc, char *argv[]) {
   int option_index = 0;
   int ch;
 
-  std::string schemadb_filename;
-  std::string schemadb_filename2;
+  std::string schemadb_filename;  
   int schema_id = 0;
   int schema_id2 = 0;
   int key = 0;
   int pos=0;
   int init_pos = 0;
   std::string field_name, field_value;
-  std::string infile, outfile;
-  std::string indexfile, bplusfile;
+  std::string infile,infile2, outfile;
+  std::string indexfile, indexfile2, bplusfile;
 
   while((ch = getopt_long(argc, argv, "hi:o:", long_options, &option_index)) != -1) {
     switch(ch) {
@@ -111,21 +112,21 @@ int main(int argc, char *argv[]) {
         if(!strcmp(long_options[option_index].name, "schemadb")) {
           schemadb_filename = std::string(optarg);
         }
-        if(!strcmp(long_options[option_index].name, "schemadb2")) {          
-          schemadb_filename2 = std::string(optarg);
-        }
         else if(!strcmp(long_options[option_index].name, "schema")) {
           schema_id = std::stoi(std::string(optarg));
+        }
+        else if(!strcmp(long_options[option_index].name, "schema2")) {
+          schema_id2 = std::stoi(std::string(optarg));
+        }
+        else if(!strcmp(long_options[option_index].name, "in2")) {
+          infile2 = std::string(optarg);
         }
         else if(!strcmp(long_options[option_index].name, "pos")) {
           pos = std::stoi(std::string(optarg));
         }
         else if(!strcmp(long_options[option_index].name, "init_pos")) {
           init_pos = std::stoi(std::string(optarg));
-        }
-        else if(!strcmp(long_options[option_index].name, "schema2")) {
-          schema_id2 = std::stoi(std::string(optarg));
-        }
+        }        
         else if(!strcmp(long_options[option_index].name, "key")) {
           key = std::stoi(std::string(optarg));
         }
@@ -137,6 +138,9 @@ int main(int argc, char *argv[]) {
         }
         else if(!strcmp(long_options[option_index].name, "indexfile")) {
           indexfile = std::string(optarg);
+        }
+        else if(!strcmp(long_options[option_index].name, "indexfile2")) {
+          indexfile2 = std::string(optarg);
         }
         else if(!strcmp(long_options[option_index].name, "bplusfile")) {
           bplusfile = std::string(optarg);
@@ -156,8 +160,7 @@ int main(int argc, char *argv[]) {
     usage(argv[0]);
   }
 
-  SchemaDb schemadb(schemadb_filename);
-  SchemaDb schemadb2(schemadb_filename2);
+  SchemaDb schemadb(schemadb_filename);  
   Schema schema,schema1,schema2;
 
 
@@ -292,37 +295,32 @@ int main(int argc, char *argv[]) {
 
       break;
       }
-    case OPERATION_JOIN_EXISTING_INDEX:
+    case OPERATION_JOIN_NATURAL_INNER:
       {
-      std::cout << "mode: join with existing index" << std::endl;
+      std::cout << "mode: natural inner join" << std::endl;
       schema1 = schemadb.get_schema(schema_id);
-      schema2 = schemadb2.get_schema(schema_id2);
-      schema1.load_index(infile);
-      schema1.join_existing_index(schema2);
+      schema2 = schemadb.get_schema(schema_id2);  
+      Join_Conditions jc;
+      jc.rel1_filename=infile.c_str();
+      jc.rel2_filename=infile2.c_str();
+      jc.field_name="name";
+      jc.type=NESTED;      
+      schema1.join_natural_inner(schema2,jc);
       break;
       }
-    case OPERATION_JOIN_NEW_INDEX:
+    case OPERATION_JOIN_NATURAL_LEFT:
       {
-      std::cout << "mode: join with new index" << std::endl;
-      schema1 = schemadb.get_schema(schema_id);
-      schema2 = schemadb2.get_schema(schema_id2);
-      schema1.join_new_index(schema2);
+      std::cout << "mode: natural left join" << std::endl;
       break;
       }
-    case OPERATION_JOIN_MERGE:
+    case OPERATION_JOIN_NATURAL_RIGHT:
       {
-      std::cout << "mode: join through merge" << std::endl;
-      schema1 = schemadb.get_schema(schema_id);
-      schema2 = schemadb2.get_schema(schema_id2);
-      schema1.join_merge(schema2);
+      std::cout << "mode: natural right join" << std::endl;
       break;
       }
-    case OPERATION_JOIN_HASH:
+    case OPERATION_JOIN_NATURAL_FULL:
       {
-      std::cout << "mode: join through hash" << std::endl;
-      schema1 = schemadb.get_schema(schema_id);
-      schema2 = schemadb2.get_schema(schema_id2);
-      schema1.join_hash(schema2);
+      std::cout << "mode: natural full join" << std::endl;
       break;
       }
   }
