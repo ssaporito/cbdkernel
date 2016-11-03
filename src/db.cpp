@@ -33,6 +33,7 @@ do { \
 int main(int argc, char *argv[]) {
   enum {
     OPERATION_CONVERT,
+    OPERATION_PRINT_BIN,
     OPERATION_CREATE_INDEX,
     OPERATION_CREATE_INDEX_BPLUS,
     OPERATION_LOAD_DATA,
@@ -52,6 +53,7 @@ int main(int argc, char *argv[]) {
   static struct option long_options[] = {
     // Modes.
     {"convert", no_argument, &operation_flag, OPERATION_CONVERT},
+    {"print-bin", no_argument, &operation_flag, OPERATION_PRINT_BIN},
     {"create-index", no_argument, &operation_flag, OPERATION_CREATE_INDEX},
     {"create-index-bplus", no_argument, &operation_flag, OPERATION_CREATE_INDEX_BPLUS},
     {"search-index", no_argument, &operation_flag, OPERATION_SEARCH_INDEX},
@@ -169,6 +171,11 @@ int main(int argc, char *argv[]) {
       schema = schemadb.get_schema(schema_id);
       schema.convert_to_bin(infile, outfile, true);
       break;
+    case OPERATION_PRINT_BIN:
+      std::cout << "mode: print bin" << std::endl;
+      schema = schemadb.get_schema(schema_id);
+      schema.print_binary(infile);
+      break;
     case OPERATION_CREATE_INDEX:
       std::cout << "mode: create index" << std::endl;
       schema = schemadb.get_schema(schema_id);
@@ -182,10 +189,11 @@ int main(int argc, char *argv[]) {
     case OPERATION_LOAD_DATA:
       std::cout << "mode: load data" << std::endl;
       schema = schemadb.get_schema(schema_id);
-      for(int i=0;i<100;i++){
+      schema.load_data(pos,infile);
+      /*for(int i=0;i<100;i++){
         schema.load_data(pos,infile);
-        pos+=333;     
-      }
+        pos+=schema.get_header_size()+schema.get_size();     
+      }*/
       //schema.load_data(pos, infile);
       break;
     case OPERATION_SEARCH_INDEX:
@@ -206,7 +214,7 @@ int main(int argc, char *argv[]) {
       std::cout << "mode: search field" << std::endl;
       schema = schemadb.get_schema(schema_id);
       std::vector<int> row_vec = schema.search_field(field_name, field_value, infile, init_pos);
-      for (int i=0; i<row_vec.size(); i++){
+      for (unsigned i=0; i<row_vec.size(); i++){
         schema.load_data(row_vec[i],infile);
       }
       break;}

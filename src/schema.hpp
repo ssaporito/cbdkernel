@@ -16,9 +16,11 @@ public:
     virtual ~Schema();
     Schema(const std::string& filename, int id);
     int get_size() const;
+    int get_header_size() const;
     int get_id() const;
     std::string get_filename() const;
     void convert_to_bin(const std::string& csv_filename, const std::string& bin_filename, bool ignore_first_line = true) const;
+    void print_binary(const std::string& bin_filename) const;
     void create_index(const std::string& bin_filename, const std::string& index_filename) const;
     void create_index_bplus(const std::string& bin_filename, const std::string& index_filename) const;
     void create_index_hash(const std::string& bin_filename, const std::string& index_filename) const;
@@ -44,9 +46,10 @@ public:
     
 private:
     void compute_size();
-
+    void compute_header_size();
     std::vector< std::pair<std::string, std::string> > metadata;
     int size;
+    int header_size;
     std::string schema_filename;
     int id;
     std::vector<std::pair<int, int> > index_map;

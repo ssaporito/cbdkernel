@@ -18,6 +18,7 @@ std::string get_current_timestamp() {
 
 Schema::Schema(){
     compute_size();
+    compute_header_size();
 }
 
 Schema::~Schema() {
@@ -42,10 +43,15 @@ Schema::Schema(const std::string& filename, int id) :
     input.close();
 
     compute_size();
+    compute_header_size();
 }
 
 int Schema::get_size() const {
     return size;
+}
+
+int Schema::get_header_size() const {
+    return header_size;
 }
 
 void Schema::compute_size() {
@@ -60,6 +66,10 @@ void Schema::compute_size() {
             size += atoi(data.first.c_str() + 1);
         }
     }
+}
+
+void Schema::compute_header_size(){
+    header_size=(1+1)*sizeof(int)+TIMESTAMP_SIZE*sizeof(char);
 }
 
 int Schema::get_id() const {
@@ -112,6 +122,37 @@ void Schema::convert_to_bin(const std::string& csv_filename, const std::string& 
 
     fclose(bin_file);
     csv_file.close();
+}
+
+void Schema::print_binary(const std::string& bin_filename) const{
+    FILE* bin_file = fopen(bin_filename.c_str(),"rb");
+    int offset=get_header_size();
+    fseek(bin_file,0,SEEK_SET);
+
+    while(!feof(bin_file)){
+        fseek(bin_file,offset,SEEK_CUR);
+        for(unsigned i = 0; i < metadata.size() ; i++){
+            if (metadata[i].first[0] == 'i') {
+                int int_token;
+                fread(&int_token, sizeof(int), 1, bin_file);
+                std::cout<<int_token;
+            }
+            else{
+                int string_size=atoi(metadata[i].first.c_str()+1);
+                char* data_value=(char*)malloc(sizeof(char)*string_size);
+                fread(data_value,sizeof(char),string_size,bin_file);  
+                std::cout<<data_value;  
+            }  
+            if(i==metadata.size()-1){
+                std::cout<<"\n"<<std::endl;
+            }   
+            else{
+                std::cout<<",";
+            }                       
+        }        
+    }
+    
+    fclose(bin_file);
 }
 
 void Schema::create_index(const std::string& bin_filename, const std::string& index_filename) const {
@@ -271,11 +312,13 @@ void Schema::load_index_indirect_hash(const std::string& index_filename) {
 
 void Schema::load_data(int pos, const std::string& bin_filename){
     FILE* bin_file = fopen(bin_filename.c_str(),"rb");
-    pos += ( (1+1)*sizeof(int) + TIMESTAMP_SIZE*sizeof(char) );
+    pos += get_header_size();
     fseek(bin_file,pos,SEEK_SET);
     std::vector<char*> data;
+    int string_size;
+
     for(unsigned i = 0; i < metadata.size() ; i++){
-        int string_size=atoi(metadata[i].first.substr(1).c_str());
+        string_size=atoi(metadata[i].first.c_str()+1);
         char* data_value=(char*)malloc(sizeof(char)*string_size);
         data.push_back(data_value);
         fread(data[i],sizeof(char),string_size,bin_file);
@@ -301,12 +344,12 @@ std::vector<int> Schema::search_field(std::string field_name, std::string field_
         row_pos = pos;
 
         //Jump the header
-        pos += ( (1+1)*sizeof(int) + TIMESTAMP_SIZE*sizeof(char) );
+        pos += get_header_size();
         fseek(binfile,pos,SEEK_SET);
         std::vector<char*> data;
 
         for(unsigned i = 0; i < metadata.size() ; i++){
-            int string_size=atoi(metadata[i].first.substr(1).c_str());
+            string_size=atoi(metadata[i].first.c_str()+1);
             if (metadata[i].second == field_name){
                 char* data_value=(char*)malloc(sizeof(char)*string_size);
                 data.push_back(data_value);
@@ -317,7 +360,7 @@ std::vector<int> Schema::search_field(std::string field_name, std::string field_
                 }
             }
             pos += string_size;
-            fseek(binfile,pos,SEEK_SET);
+            //fseek(binfile,pos,SEEK_SET);
         }
     }
 
@@ -358,7 +401,7 @@ int Schema::search_for_key_direct_hash(int key, const std::string& bin_filename)
     int k;
 
     //find record
-    std::size_t int_hash;
+    std::size_t int_hash=0;
     std::hash<int> hash_fn;
     fseek(binfile, hash_fn(key), SEEK_CUR); 
 	

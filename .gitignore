@@ -1,3 +1,7 @@
+# Executable #
+##############
+src/db
+
 # Compiled source #
 ###################
 *.com
