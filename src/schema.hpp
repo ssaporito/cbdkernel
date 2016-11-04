@@ -9,18 +9,27 @@
 #include <unordered_map>
 
 std::string get_current_timestamp();
-enum join_type{
+enum join_implementation{
     NESTED,
     NESTED_EXISTING_INDEX,
     NESTED_NEW_INDEX,
     MERGE,
     HASH
 };
+
+enum join_type{
+    NATURAL_INNER,
+    NATURAL_LEFT,
+    NATURAL_RIGHT,
+    NATURAL_FULL
+};
+
 class Join_Conditions{
     public:
         std::string rel1_filename;
         std::string rel2_filename;
         std::string field_name;
+        join_implementation implementation;
         join_type type;
 };
 class Schema {
@@ -52,10 +61,11 @@ public:
     int search_for_key_direct_hash(int key, const std::string& bin_filename) const;
     int search_for_key_raw(int key, const std::string& bin_filename) const;
     std::vector<int> search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos) const;
+    void join(Schema &schema2,Join_Conditions jc);  
     void join_natural_inner(Schema &schema2,Join_Conditions jc);
     void join_natural_left(Schema &schema2,Join_Conditions jc);
     void join_natural_right(Schema &schema2,Join_Conditions jc);
-    void join_natural_full(Schema &schema2,Join_Conditions jc);    
+    void join_natural_full(Schema &schema2,Join_Conditions jc);
 
     static const int TIMESTAMP_SIZE = 25;
     static const int HEADER_SIZE = TIMESTAMP_SIZE * sizeof(char) + 2 * sizeof(int);

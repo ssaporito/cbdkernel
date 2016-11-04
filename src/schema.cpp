@@ -447,8 +447,29 @@ int Schema::search_for_key_raw(int key, const std::string& bin_filename) const {
     fclose(binfile);
     return -1;
 }
-void Schema::join_natural_inner(Schema &schema2,Join_Conditions jc){
+void Schema::join(Schema &schema2,Join_Conditions jc){
     switch(jc.type){
+        case NATURAL_INNER:{
+            join_natural_inner(schema2,jc);
+            break;
+        }
+        case NATURAL_LEFT:{
+            join_natural_left(schema2,jc);
+            break;
+        }
+        case NATURAL_RIGHT:{
+            join_natural_right(schema2,jc);
+            break;
+        }
+        case NATURAL_FULL:{
+            join_natural_full(schema2,jc);
+        }
+    }        
+        
+}
+
+void Schema::join_natural_inner(Schema &schema2,Join_Conditions jc){
+    switch(jc.implementation){
         case NESTED:{
             FILE* rel1 = fopen(jc.rel1_filename.c_str(), "rb");
             FILE* rel2 = fopen(jc.rel2_filename.c_str(), "rb");
@@ -506,8 +527,8 @@ void Schema::join_natural_inner(Schema &schema2,Join_Conditions jc){
 }
 
 void Schema::join_natural_left(Schema &schema2,Join_Conditions jc){
-    switch(jc.type){
-        case NESTED:{
+    switch(jc.implementation){
+        case NESTED:{            
             break;
         }
         case NESTED_EXISTING_INDEX:{
@@ -529,31 +550,12 @@ void Schema::join_natural_left(Schema &schema2,Join_Conditions jc){
 }
 
 void Schema::join_natural_right(Schema &schema2,Join_Conditions jc){
-    switch(jc.type){
-        case NESTED:{
-            break;
-        }
-        case NESTED_EXISTING_INDEX:{
-            break;
-        }
-        case NESTED_NEW_INDEX:{
-            break;
-        }
-        case MERGE:{
-            break;
-        }
-        case HASH:{
-            break;
-        }
-        default:{
-            break;
-        }
-    }
+    schema2.join_natural_left(*this,jc);
 }
 
 void Schema::join_natural_full(Schema &schema2,Join_Conditions jc){
-    switch(jc.type){
-        case NESTED:{
+    switch(jc.implementation){
+        case NESTED:{            
             break;
         }
         case NESTED_EXISTING_INDEX:{
@@ -573,5 +575,4 @@ void Schema::join_natural_full(Schema &schema2,Join_Conditions jc){
         }
     }
 }
-
 
