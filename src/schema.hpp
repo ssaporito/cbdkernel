@@ -60,7 +60,7 @@ public:
     int search_for_key_indirect_hash(int key) const;
     int search_for_key_direct_hash(int key, const std::string& bin_filename) const;
     int search_for_key_raw(int key, const std::string& bin_filename) const;
-    std::vector<int> search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos) const;
+    std::vector<int> search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos);
     void join(Schema &schema2,Join_Conditions jc);  
     void join_natural_inner(Schema &schema2,Join_Conditions jc);
     void join_natural_left(Schema &schema2,Join_Conditions jc);
@@ -71,15 +71,17 @@ public:
     static const int HEADER_SIZE = TIMESTAMP_SIZE * sizeof(char) + 2 * sizeof(int);
     bpt::bplus_tree *bplus = NULL;
     
-private:
+private:    
     void compute_size();
     void compute_header_size();    
     int size;
     int header_size;
     std::string schema_filename;
     int id;
-    std::vector< std::pair<std::string, std::string> > metadata;
+    std::vector< std::pair<std::string, std::string> > metadata;    
     std::vector<std::pair<int, int> > index_map;
+    std::unordered_map<std::string, int> column_index;
+    std::unordered_map<std::string, int> column_offset; // offset from start of row data (does not include header)
     std::unordered_map<std::size_t*,int> index_hash;
 
 };

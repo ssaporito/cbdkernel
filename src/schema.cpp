@@ -31,13 +31,26 @@ Schema::Schema(const std::string& filename, int id) :
     schema_filename(filename),
     id(id) {
     std::ifstream input(filename);
-
+    int i=0;
+    int offset=0; 
     while(input.good() && input.peek() != EOF) {
         std::string datatype, column;
         std::getline(input, datatype, ',');
         std::getline(input, column);
-
+        
+        
         metadata.push_back(std::make_pair(datatype, column));
+        column_index.insert(std::make_pair(column,i));
+        column_offset.insert(std::make_pair(column,offset));
+        int column_size=0;
+        if(datatype=="int"){
+            column_size=sizeof(int);
+        }
+        else{
+            column_size=atoi(datatype.c_str()+1);  // Assumes string   
+        }
+        offset+=column_size;
+        i++;
     }
 
     input.close();
@@ -323,58 +336,54 @@ void Schema::load_index_indirect_hash(const std::string& index_filename) {
 void Schema::load_data(int pos, const std::string& bin_filename){
     FILE* bin_file = fopen(bin_filename.c_str(),"rb");
     pos += get_header_size();
-    fseek(bin_file,pos,SEEK_SET);
-    std::vector<char*> data;
+    fseek(bin_file,pos,SEEK_SET);    
     int string_size;
 
     for(unsigned i = 0; i < metadata.size() ; i++){
         string_size=atoi(metadata[i].first.c_str()+1);
-        char* data_value=(char*)malloc(sizeof(char)*string_size);
-        data.push_back(data_value);
-        fread(data[i],sizeof(char),string_size,bin_file);
-        std::cout<<data[i]<<std::endl;
+        char* data_value=(char*)malloc(sizeof(char)*string_size);        
+        fread(data_value,sizeof(char),string_size,bin_file);
+        std::cout<<data_value<<" "<<std::endl;//<<column_offset[metadata[i].second]<<std::endl;
         pos+=string_size;
     }
     fclose(bin_file);
 }
 
-std::vector<int> Schema::search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos = 0) const{
-    FILE* binfile = fopen(bin_filename.c_str(), "rb");
-    
-    int string_size;
-    int pos = init_pos;
-    int row_pos;
-    int file_size;
+std::vector<int> Schema::search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos = 0){
     std::vector<int> pos_vec;
+    if(column_offset.find(field_name)!=column_offset.end()){
+        int offset=column_offset[field_name];
+        int index=column_index[field_name];
+        FILE* binfile = fopen(bin_filename.c_str(), "rb");    
+        int string_size;
+        int pos = init_pos;
+        int row_pos;
+        int file_size;        
 
-    fseek(binfile,0,SEEK_END);
-    file_size = ftell(binfile);
+        fseek(binfile,0,SEEK_END);
+        file_size = ftell(binfile);
 
-    while(file_size > pos) {
-        row_pos = pos;
+        while(file_size > pos) {
+            row_pos = pos;
 
-        //Jump the header
-        pos += get_header_size();
-        fseek(binfile,pos,SEEK_SET);
-        std::vector<char*> data;
-
-        for(unsigned i = 0; i < metadata.size() ; i++){
-            string_size=atoi(metadata[i].first.c_str()+1);
-            if (metadata[i].second == field_name){
-                char* data_value=(char*)malloc(sizeof(char)*string_size);
-                data.push_back(data_value);
-                fread(data[0],sizeof(char),string_size,binfile);
-                if (data[0] == field_value){
-                    //std::cout<<data[0]<<row_pos<<std::endl;
-                    pos_vec.push_back(row_pos);
-                }
-            }
-            pos += string_size;
-            //fseek(binfile,pos,SEEK_SET);
+            //Jump the header
+            pos += get_header_size();
+            fseek(binfile,pos+offset,SEEK_SET);                    
+            string_size=atoi(metadata[index].first.c_str()+1);            
+            char* data_value=(char*)malloc(sizeof(char)*string_size);                
+            fread(data_value,sizeof(char),string_size,binfile);
+            if (data_value == field_value){
+                //std::cout<<data[0]<<row_pos<<std::endl;
+                pos_vec.push_back(row_pos);
+            }                        
+            pos+=get_size();
         }
-    }
 
-    fclose(binfile);
+        fclose(binfile);
+    }
+    else{
+        std::cout<<"Column not in table schema."<<std::endl;
+    }
     return pos_vec;
 }
 

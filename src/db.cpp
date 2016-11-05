@@ -304,7 +304,8 @@ int main(int argc, char *argv[]) {
       jc.rel1_filename=infile.c_str();
       jc.rel2_filename=infile2.c_str();
       jc.field_name="name";
-      jc.type=NESTED;      
+      jc.type=NATURAL_INNER;
+      jc.implementation=NESTED;      
       schema1.join_natural_inner(schema2,jc);
       break;
       }
