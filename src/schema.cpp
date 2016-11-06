@@ -560,7 +560,7 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
             int offset2=schema2.get_column_offset().at(jc.field_name);
 
             int index1=column_index.at(jc.field_name);
-            int index2=column_index.at(jc.field_name);
+            int index2=schema2.get_column_index().at(jc.field_name);
                        
 
             fseek(rel1,0,SEEK_END);
