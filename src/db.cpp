@@ -30,6 +30,41 @@ do { \
   printf("Time taken %d milliseconds %d microseconds\n", usec / 1000, usec % 1000); \
 } while(false)
 
+join_implementation string_to_join_implementation(std::string string_join_impl){
+    if(string_join_impl=="nested"){
+        return NESTED;
+    }
+    else if(string_join_impl=="nested_existing_index"){
+        return NESTED_EXISTING_INDEX;
+    }
+    else if(string_join_impl=="nested_new_index"){
+        return NESTED_NEW_INDEX;
+    }
+    else if(string_join_impl=="merge"){
+        return MERGE;
+    }
+    else if(string_join_impl=="hash"){
+        return HASH;
+    }
+    else return NESTED;
+}
+
+join_type string_to_join_type(std::string string_join_type){
+    if(string_join_type=="natural_inner"){
+        return NATURAL_INNER;
+    }
+    else if(string_join_type=="natural_left"){
+        return NATURAL_LEFT;
+    }
+    else if(string_join_type=="natural_right"){
+        return NATURAL_RIGHT;
+    }
+    else if(string_join_type=="natural_full"){
+        return NATURAL_FULL;
+    }    
+    else return NATURAL_INNER;
+}
+
 int main(int argc, char *argv[]) {
   enum {
     OPERATION_CONVERT,
@@ -40,10 +75,7 @@ int main(int argc, char *argv[]) {
     OPERATION_SEARCH_INDEX,
     OPERATION_SEARCH_INDEX_BPLUS,
     OPERATION_SEARCH_BENCHMARK,
-    OPERATION_JOIN_NATURAL_INNER,
-    OPERATION_JOIN_NATURAL_LEFT,
-    OPERATION_JOIN_NATURAL_RIGHT,
-    OPERATION_JOIN_NATURAL_FULL,
+    OPERATION_JOIN,
     OPERATION_JOIN_BENCHMARK,
     OPERATION_SEARCH_FIELD
   };
@@ -61,17 +93,16 @@ int main(int argc, char *argv[]) {
     {"search-benchmark", no_argument, &operation_flag, OPERATION_SEARCH_BENCHMARK},
     {"search-field", no_argument, &operation_flag, OPERATION_SEARCH_FIELD},
     {"load-data", no_argument, &operation_flag, OPERATION_LOAD_DATA},
-    {"join-natural-inner", no_argument, &operation_flag, OPERATION_JOIN_NATURAL_INNER},
-    {"join-natural-left", no_argument, &operation_flag, OPERATION_JOIN_NATURAL_LEFT},
-    {"join-natural-right", no_argument, &operation_flag, OPERATION_JOIN_NATURAL_RIGHT},
-    {"join-natural-full", no_argument, &operation_flag, OPERATION_JOIN_NATURAL_FULL},
+    {"join", no_argument, &operation_flag, OPERATION_JOIN},
 
     // Mode options.
     {"schema", required_argument, NULL, 0},
-    {"schema2", optional_argument, NULL, 0},
+    {"schema2", required_argument, NULL, 0},
     {"schemadb", required_argument, NULL, 0},
     {"in", required_argument, NULL, 'i'},
-    {"in2", optional_argument, NULL, 0},    
+    {"in2", required_argument, NULL, 0},
+    {"join-type", optional_argument, NULL, 0},
+    {"join-impl", optional_argument, NULL, 0},    
     {"out", required_argument, NULL, 'o'},
     {"key", required_argument, NULL, 0},
     {"pos",required_argument,NULL,0},
@@ -99,6 +130,8 @@ int main(int argc, char *argv[]) {
   std::string field_name, field_value;
   std::string infile,infile2, outfile;
   std::string indexfile, indexfile2, bplusfile;
+  join_implementation join_impl;
+  join_type join_tp;
 
   while((ch = getopt_long(argc, argv, "hi:o:", long_options, &option_index)) != -1) {
     switch(ch) {
@@ -144,6 +177,12 @@ int main(int argc, char *argv[]) {
         }
         else if(!strcmp(long_options[option_index].name, "bplusfile")) {
           bplusfile = std::string(optarg);
+        }
+        else if(!strcmp(long_options[option_index].name, "join-impl")) {
+          join_impl = string_to_join_implementation(std::string(optarg));
+        }
+        else if(!strcmp(long_options[option_index].name, "join-type")) {
+          join_tp = string_to_join_type(std::string(optarg));
         }
         break;
       case 'h':
@@ -295,33 +334,19 @@ int main(int argc, char *argv[]) {
 
       break;
       }
-    case OPERATION_JOIN_NATURAL_INNER:
+    case OPERATION_JOIN:
       {
-      std::cout << "mode: natural inner join" << std::endl;
+      std::cout << "mode: join" << std::endl;
       schema1 = schemadb.get_schema(schema_id);
       schema2 = schemadb.get_schema(schema_id2);  
       Join_Conditions jc;
       jc.rel1_filename=infile.c_str();
       jc.rel2_filename=infile2.c_str();
-      jc.field_name="name";
-      jc.type=NATURAL_INNER;
-      jc.implementation=NESTED;      
-      schema1.join_natural_inner(schema2,jc);
-      break;
-      }
-    case OPERATION_JOIN_NATURAL_LEFT:
-      {
-      std::cout << "mode: natural left join" << std::endl;
-      break;
-      }
-    case OPERATION_JOIN_NATURAL_RIGHT:
-      {
-      std::cout << "mode: natural right join" << std::endl;
-      break;
-      }
-    case OPERATION_JOIN_NATURAL_FULL:
-      {
-      std::cout << "mode: natural full join" << std::endl;
+      jc.field_name=field_name;
+      jc.type=join_tp;
+      jc.implementation=join_impl;      
+      schema1.join(schema2,jc);
+
       break;
       }
   }

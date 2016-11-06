@@ -20,6 +20,9 @@ Imprimir todos os registros:
 
 ./db --print-bin --schemadb=../data/schema/schemadb.cfg --schema 0 --in ../data/csv/company_small.bin 
 
+Join:
+
+--join --join-type=natural_inner --join-impl=nested --field_name=name --schemadb=../data/schema/schemadb.cfg --schema 0 --schema2 1 --in ../data/csv/company_small.bin --in2 ../data/csv/telephones.bin
 
 
 
@@ -30,6 +33,7 @@ Imprimir todos os registros:
   - [x] Função de ler os dados (load_data)  
   - [x] Testar load_data
   - [ ] Joins (natural inner, natural left, natural right, natural full)
+  - - [ ] Nested join
   - - [ ] Nested join with existing index
   - - [ ] Nested join with new index
   - - [ ] Merge join

@@ -40,9 +40,11 @@ public:
     int get_size() const;
     int get_header_size() const;
     int get_id() const;
-    std::vector< std::pair<std::string, std::string> > get_metadata();
-    std::vector<std::pair<int, int> > get_index_map();
-    std::unordered_map<std::size_t*,int> get_index_hash();
+    std::vector< std::pair<std::string, std::string> > get_metadata() const;
+    std::unordered_map<std::string, int> get_column_index() const;
+    std::unordered_map<std::string, int> get_column_offset() const;
+    std::vector<std::pair<int, int> > get_index_map() const;
+    std::unordered_map<std::size_t*,int> get_index_hash() const;
     std::string get_filename() const;
     void convert_to_bin(const std::string& csv_filename, const std::string& bin_filename, bool ignore_first_line = true) const;
     void print_binary(const std::string& bin_filename) const;
@@ -60,12 +62,12 @@ public:
     int search_for_key_indirect_hash(int key) const;
     int search_for_key_direct_hash(int key, const std::string& bin_filename) const;
     int search_for_key_raw(int key, const std::string& bin_filename) const;
-    std::vector<int> search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos);
+    std::vector<int> search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos) const;
     void join(Schema &schema2,Join_Conditions jc);  
-    void join_natural_inner(Schema &schema2,Join_Conditions jc);
-    void join_natural_left(Schema &schema2,Join_Conditions jc);
-    void join_natural_right(Schema &schema2,Join_Conditions jc);
-    void join_natural_full(Schema &schema2,Join_Conditions jc);
+    std::vector<std::pair<int,int>> join_natural_inner(Schema &schema2,Join_Conditions jc);
+    std::vector<std::pair<int,int>> join_natural_left(Schema &schema2,Join_Conditions jc);
+    std::vector<std::pair<int,int>> join_natural_right(Schema &schema2,Join_Conditions jc);
+    std::vector<std::pair<int,int>> join_natural_full(Schema &schema2,Join_Conditions jc);
 
     static const int TIMESTAMP_SIZE = 25;
     static const int HEADER_SIZE = TIMESTAMP_SIZE * sizeof(char) + 2 * sizeof(int);
