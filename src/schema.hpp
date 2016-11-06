@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "auxiliary.hpp"
 #include "BPlusTree/bpt.h"
 #include <unordered_map>
 
@@ -37,8 +38,9 @@ public:
     Schema();
     virtual ~Schema();
     Schema(const std::string& filename, int id);
-    int get_size() const;
-    int get_header_size() const;
+    int get_data_size() const; //size of data
+    int get_header_size() const; // size of header
+    int get_row_size() const; // size of header+data
     int get_id() const;
     std::vector< std::pair<std::string, std::string> > get_metadata() const;
     std::unordered_map<std::string, int> get_column_index() const;
@@ -48,6 +50,7 @@ public:
     std::string get_filename() const;
     void convert_to_bin(const std::string& csv_filename, const std::string& bin_filename, bool ignore_first_line = true) const;
     void print_binary(const std::string& bin_filename) const;
+    std::vector<std::string> get_table(const std::string& rel_filename,const std::string& field_name) const;
     void create_index(const std::string& bin_filename, const std::string& index_filename) const;
     void create_index_bplus(const std::string& bin_filename, const std::string& index_filename) const;
     void create_index_hash(const std::string& bin_filename, const std::string& index_filename) const;

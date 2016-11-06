@@ -4,6 +4,9 @@ Compilar:
 
 make
 
+Converter um csv em binário:
+./db --schemadb=../data/schema/schemadb.cfg --convert --in ../data/csv/telephones.csv --out ../data/csv/telephones.bin
+
 Executar com benchmark:
 
 ./db --search-benchmark --schemadb=../data/schema/schemadb.cfg --schema 0 --in ../data/csv/company_small.csv
@@ -22,7 +25,7 @@ Imprimir todos os registros:
 
 Join:
 
-./db --join --join-type=natural_inner --join-impl=nested --field_name=name --schemadb=../data/schema/schemadb.cfg --schema 0 --schema2 1 --in ../data/csv/company_small.bin --in2 ../data/csv/telephones.bin
+./db --join --join-type=[natural_inner|natural_left|natural_right|natural_full] --join-impl=[nested|nested_existing_index|nested_new_index|merge|hash] --field_name=name --schemadb=../data/schema/schemadb.cfg --schema 0 --schema2 1 --in ../data/csv/company_small.bin --in2 ../data/csv/telephones.bin
 
 
 
@@ -31,11 +34,11 @@ Join:
 1. TODO
   - [x] Função de ler os dados (load_data)  
   - [x] Testar load_data
-  - [ ] Joins (natural inner, natural left, natural right, natural full)
-  - - [ ] Nested join
+  - [x] Joins (natural inner, natural left, natural right, natural full)
+  - - [x] Nested join
   - - [ ] Nested join with existing index
   - - [ ] Nested join with new index
-  - - [ ] Merge join
+  - - [x] Merge join
   - - [ ] Hash join
 
 

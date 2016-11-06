@@ -81,7 +81,7 @@ int Schema::get_id() const {
     return id;
 }
 
-int Schema::get_size() const {
+int Schema::get_data_size() const {
     return size;
 }
 
@@ -89,6 +89,9 @@ int Schema::get_header_size() const {
     return header_size;
 }
 
+int Schema::get_row_size() const{
+    return header_size+size;
+}
 std::vector< std::pair<std::string, std::string> > Schema::get_metadata() const{
     return metadata;
 }
@@ -185,6 +188,29 @@ void Schema::print_binary(const std::string& bin_filename) const{
     }
     
     fclose(bin_file);
+}
+
+std::vector<std::string> Schema::get_table(const std::string& rel_filename,const std::string& field_name) const{
+    int offset=column_offset.at(field_name);    
+    int index=column_index.at(field_name);    
+
+    FILE* rel = fopen(rel_filename.c_str(), "rb");
+    fseek(rel,0,SEEK_END);
+    int rel_size = ftell(rel);        
+    int pos=0; 
+    fseek(rel,0,SEEK_SET); 
+    std::vector<std::string> data;                
+    while(pos<rel_size) {        
+        pos+=get_header_size();
+        fseek(rel,pos+offset,SEEK_SET);
+        int column_size=atoi(metadata[index].first.c_str()+1);            
+        char* value=(char*)malloc(sizeof(char)*column_size);               
+        fread(value,sizeof(char),column_size,rel);        
+        data.push_back(value);
+        pos+=get_data_size();
+    }
+    fclose(rel);
+    return data;
 }
 
 void Schema::create_index(const std::string& bin_filename, const std::string& index_filename) const {
@@ -343,19 +369,26 @@ void Schema::load_index_indirect_hash(const std::string& index_filename) {
 
 
 void Schema::load_data(int pos, const std::string& bin_filename){
-    FILE* bin_file = fopen(bin_filename.c_str(),"rb");
-    pos += get_header_size();
-    fseek(bin_file,pos,SEEK_SET);    
-    int string_size;
+    if(pos!=-1){
+        FILE* bin_file = fopen(bin_filename.c_str(),"rb");
+        pos += get_header_size();
+        fseek(bin_file,pos,SEEK_SET);    
+        int string_size;
 
-    for(unsigned i = 0; i < metadata.size() ; i++){
-        string_size=atoi(metadata[i].first.c_str()+1);
-        char* data_value=(char*)malloc(sizeof(char)*string_size);        
-        fread(data_value,sizeof(char),string_size,bin_file);
-        std::cout<<data_value<<((i==metadata.size()-1)?(""):(","));//<<column_offset[metadata[i].second]<<std::endl;
-        pos+=string_size;
+        for(unsigned i = 0; i < metadata.size() ; i++){
+            string_size=atoi(metadata[i].first.c_str()+1);
+            char* data_value=(char*)malloc(sizeof(char)*string_size);        
+            fread(data_value,sizeof(char),string_size,bin_file);
+            std::cout<<data_value<<((i==metadata.size()-1)?(""):(","));//<<column_offset[metadata[i].second]<<std::endl;
+            pos+=string_size;
+        }
+        fclose(bin_file);
     }
-    fclose(bin_file);
+    else{ // print null columns for pos=-1 (used in joins)
+        for(unsigned i = 0; i < metadata.size() ; i++){            
+            std::cout<<"NULL"<<((i==metadata.size()-1)?(""):(","));//<<column_offset[metadata[i].second]<<std::endl;            
+        }
+    }
 }
 
 std::vector<int> Schema::search_field(std::string field_name, std::string field_value, const std::string& bin_filename, int init_pos = 0) const{
@@ -385,7 +418,7 @@ std::vector<int> Schema::search_field(std::string field_name, std::string field_
                 //std::cout<<data[0]<<row_pos<<std::endl;
                 pos_vec.push_back(row_pos);
             }                        
-            pos+=get_size();
+            pos+=get_data_size();
         }
 
         fclose(binfile);
@@ -473,15 +506,15 @@ void Schema::join(Schema &schema2,Join_Conditions jc){
             break;
         }
         case NATURAL_LEFT:{
-            join_natural_left(schema2,jc);
+            pos_vector=join_natural_left(schema2,jc);
             break;
         }
         case NATURAL_RIGHT:{
-            join_natural_right(schema2,jc);
+            pos_vector=join_natural_right(schema2,jc);
             break;
         }
         case NATURAL_FULL:{
-            join_natural_full(schema2,jc);
+            pos_vector=join_natural_full(schema2,jc);
         }
     }        
     for(unsigned i=0;i<metadata.size();i++){
@@ -501,9 +534,23 @@ void Schema::join(Schema &schema2,Join_Conditions jc){
 }
 
 std::vector<std::pair<int,int>> Schema::join_natural_inner(Schema &schema2,Join_Conditions jc){
+    std::vector<std::pair<int,int>> pos_vector_left,pos_vector_right,pos_vector;    
+    pos_vector_left=join_natural_left(schema2,jc);
+    pos_vector_right=join_natural_right(schema2,jc);
+    for(unsigned i=0;i<pos_vector_left.size();i++){        
+        for(unsigned j=0;j<pos_vector_right.size();j++){
+            if(pos_vector_left[i]==pos_vector_right[j]){
+                pos_vector.push_back(pos_vector_right[j]);
+            }
+        }        
+    }
+    return pos_vector;
+}
+
+std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_Conditions jc){
     std::vector<std::pair<int,int>> pos_vector;
     switch(jc.implementation){
-        case NESTED:{
+        case NESTED:{  
             FILE* rel1 = fopen(jc.rel1_filename.c_str(), "rb");
             FILE* rel2 = fopen(jc.rel2_filename.c_str(), "rb");
                                             
@@ -534,6 +581,7 @@ std::vector<std::pair<int,int>> Schema::join_natural_inner(Schema &schema2,Join_
 
                 int pos2=0;
                 fseek(rel2,0,SEEK_SET);
+                bool found_joinable=false;
                 while(pos2<rel_size2){
                     int row_pos2=pos2;
                     pos2+=schema2.get_header_size();
@@ -542,16 +590,20 @@ std::vector<std::pair<int,int>> Schema::join_natural_inner(Schema &schema2,Join_
                     char* value2=(char*)malloc(sizeof(char)*column_size2);                
                     fread(value2,sizeof(char),column_size2,rel2);
                     if(!strcmp(value1,value2)){
-                        std::cout<<"Joined "<<value1<<" at positions "<<row_pos1<<","<<row_pos2<<std::endl;
+                        found_joinable=true;
+                        //std::cout<<"Joined "<<value1<<" at positions "<<row_pos1<<","<<row_pos2<<std::endl;
                         pos_vector.push_back(std::make_pair(row_pos1,row_pos2));
                     }
                     //std::cout<<value1<<" "<<value2<<std::endl;
-                    pos2+=schema2.get_size();
-                }                
-                pos1+=get_size();
+                    pos2+=schema2.get_data_size();
+                }      
+                if(!found_joinable){
+                    pos_vector.push_back(std::make_pair(row_pos1,-1));
+                }          
+                pos1+=get_data_size();
             }
             fclose(rel1); 
-            fclose(rel2);
+            fclose(rel2);          
             break;
         }
         case NESTED_EXISTING_INDEX:{
@@ -560,32 +612,39 @@ std::vector<std::pair<int,int>> Schema::join_natural_inner(Schema &schema2,Join_
         case NESTED_NEW_INDEX:{
             break;
         }
-        case MERGE:{
-            break;
-        }
-        case HASH:{
-            break;
-        }
-        default:{
-            break;
-        }
-    }
-    return pos_vector;
-}
+        case MERGE:{                                                                                  
+            std::vector<std::string> data1,data2;
+            data1=get_table(jc.rel1_filename,jc.field_name);
+            data2=schema2.get_table(jc.rel2_filename,jc.field_name);
 
-std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_Conditions jc){
-    std::vector<std::pair<int,int>> pos_vector;
-    switch(jc.implementation){
-        case NESTED:{            
-            break;
-        }
-        case NESTED_EXISTING_INDEX:{
-            break;
-        }
-        case NESTED_NEW_INDEX:{
-            break;
-        }
-        case MERGE:{
+            // keep track of old indexes
+            auto mapped_indexes1=sort_indexes(data1); 
+            auto mapped_indexes2=sort_indexes(data2);
+
+            // sort alphabetically
+            std::sort(data1.begin(),data1.end());
+            std::sort(data2.begin(),data2.end());
+
+            unsigned j_start=0;            
+            for(unsigned i=0;i<data1.size();i++){
+                bool found_joinable=false;
+                for(unsigned j=j_start;j<data2.size();j++){                                   
+                    //std::cout<<data1[i]<<" "<<data2[j]<<" "<<i<<" "<<j<<std::endl;
+                    if(data1[i]==data2[j]){
+                        found_joinable=true;                            
+                        pos_vector.push_back(std::make_pair(mapped_indexes1[i]*(get_row_size()),mapped_indexes2[j]*(schema2.get_row_size())));
+                        j_start=j;
+                    //    std::cout<<data1[i]<<" "<<data2[j]<<" "<<i<<" "<<j<<std::endl;
+                    }
+                    else if(data1[i]<data2[j]){                                            
+                        break;  // skip to next i if key2>key1
+                    }                                
+                }
+                if(!found_joinable){
+                    pos_vector.push_back(std::make_pair(mapped_indexes1[i]*(get_row_size()),-1));
+                }
+            }
+                      
             break;
         }
         case HASH:{
@@ -599,30 +658,29 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
 }
 
 std::vector<std::pair<int,int>> Schema::join_natural_right(Schema &schema2,Join_Conditions jc){
-    return schema2.join_natural_left(*this,jc);
+    std::vector<std::pair<int,int>> pos_vector;
+    Join_Conditions jc2;
+    jc2=jc;
+    jc2.rel2_filename=jc.rel1_filename;
+    jc2.rel1_filename=jc.rel2_filename;
+    pos_vector=schema2.join_natural_left(*this,jc2);
+    for(unsigned i=0;i<pos_vector.size();i++){
+        pos_vector[i]=std::make_pair(pos_vector[i].second,pos_vector[i].first);
+    }
+    return pos_vector;
 }
 
 std::vector<std::pair<int,int>> Schema::join_natural_full(Schema &schema2,Join_Conditions jc){
-    std::vector<std::pair<int,int>> pos_vector;
-    switch(jc.implementation){
-        case NESTED:{            
-            break;
-        }
-        case NESTED_EXISTING_INDEX:{
-            break;
-        }
-        case NESTED_NEW_INDEX:{
-            break;
-        }
-        case MERGE:{
-            break;
-        }
-        case HASH:{
-            break;
-        }
-        default:{
-            break;
-        }
+    std::vector<std::pair<int,int>> pos_vector_left,pos_vector_right,pos_vector;    
+    pos_vector_left=join_natural_left(schema2,jc);
+    pos_vector_right=join_natural_right(schema2,jc);
+    for(unsigned i=0;i<pos_vector_left.size();i++){
+        pos_vector.push_back(pos_vector_left[i]);
+        for(unsigned j=0;j<pos_vector_right.size();j++){
+            if(pos_vector_left[i]!=pos_vector_right[j]){
+                pos_vector.push_back(pos_vector_right[j]);
+            }
+        }        
     }
     return pos_vector;
 }
