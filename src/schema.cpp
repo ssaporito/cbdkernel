@@ -586,7 +586,7 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
                     int row_pos2=pos2;
                     pos2+=schema2.get_header_size();
                     fseek(rel2,pos2+offset2,SEEK_SET);
-                    int column_size2=atoi(metadata[index2].first.c_str()+1);            
+                    int column_size2=atoi(schema2.get_metadata()[index2].first.c_str()+1);            
                     char* value2=(char*)malloc(sizeof(char)*column_size2);                
                     fread(value2,sizeof(char),column_size2,rel2);
                     if(!strcmp(value1,value2)){
@@ -607,6 +607,48 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
             break;
         }
         case NESTED_EXISTING_INDEX:{
+
+            FILE* rel1 = fopen(jc.rel1_filename.c_str(), "rb");
+            FILE* rel2 = fopen(jc.rel2_filename.c_str(), "rb");
+
+            int offset1=column_offset.at(jc.field_name);
+            int offset2=schema2.get_column_offset().at(jc.field_name);
+
+            int index1=column_index.at(jc.field_name);
+            int index2=schema2.get_column_index().at(jc.field_name);
+                       
+                                            
+            std::vector<int> pos_vec;
+
+            for(auto i = 0 ; i < index_map.size() ; i++){
+               
+                int pos1=index_map[i].second+i*4;
+                int row_pos1 = pos1;
+                pos1+=get_header_size();
+                fseek(rel1,pos1+offset1,SEEK_SET);
+                int column_size1=atoi(metadata[index1].first.c_str()+1);            
+                char* value1=(char*)malloc(sizeof(char)*column_size1);                
+                fread(value1,sizeof(char),column_size1,rel1);
+               
+                for(auto j = 0 ; j < schema2.get_index_map().size() ; j++){
+
+                    int pos2 = schema2.get_index_map()[j].second+i*4;
+                    int row_pos2=pos2;
+                    pos2+=schema2.get_header_size();
+                    fseek(rel2,pos2+offset2,SEEK_SET);
+                    int column_size2=atoi(schema2.get_metadata()[index2].first.c_str()+1);            
+                    char* value2=(char*)malloc(sizeof(char)*column_size2);                
+                    fread(value2,sizeof(char),column_size2,rel2);
+                    
+                    if(!strcmp(value1,value2)){
+                        //std::cout<<"Joined "<<value1<<" at positions "<<row_pos1<<","<<row_pos2<<std::endl;
+                        pos_vector.push_back(std::make_pair(row_pos1,row_pos2));
+                    }
+                }
+            } 
+
+            fclose(rel1); 
+            fclose(rel2);
             break;
         }
         case NESTED_NEW_INDEX:{

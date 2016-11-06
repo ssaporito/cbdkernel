@@ -344,7 +344,13 @@ int main(int argc, char *argv[]) {
       jc.rel2_filename=infile2.c_str();
       jc.field_name=field_name;
       jc.type=join_tp;
-      jc.implementation=join_impl;      
+      jc.implementation=join_impl;
+      if(jc.implementation == NESTED_EXISTING_INDEX){
+        
+        schema1.load_index(indexfile);
+        schema2.load_index(indexfile2);
+      }   
+
       schema1.join(schema2,jc);
 
       break;

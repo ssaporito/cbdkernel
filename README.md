@@ -25,9 +25,7 @@ Imprimir todos os registros:
 
 Join:
 
-./db --join --join-type=[natural_inner|natural_left|natural_right|natural_full] --join-impl=[nested|nested_existing_index|nested_new_index|merge|hash] --field_name=name --schemadb=../data/schema/schemadb.cfg --schema 0 --schema2 1 --in ../data/csv/company_small.bin --in2 ../data/csv/telephones.bin
-
-
+./db --join --join-type=[natural_inner|natural_left|natural_right|natural_full] --join-impl=[nested|nested_existing_index|nested_new_index|merge|hash] --field_name=name --schemadb=../data/schema/schemadb.cfg --schema 0 --schema2 1 --in ../data/csv/company_small.bin --in2 ../data/csv/telephones.bin [--indexfile=../data/csv/schema1.index --indexfile2=../data/csv/schema2.index]
 
 
 
