@@ -22,8 +22,7 @@ Imprimir todos os registros:
 
 Join:
 
---join --join-type=natural_inner --join-impl=nested --field_name=name --schemadb=../data/schema/schemadb.cfg --schema 0 --schema2 1 --in ../data/csv/company_small.bin --in2 ../data/csv/telephones.bin
-
+./db --join --join-type=natural_inner --join-impl=nested --field_name=name --schemadb=../data/schema/schemadb.cfg --schema 0 --schema2 1 --in ../data/csv/company_small.bin --in2 ../data/csv/telephones.bin
 
 
 
