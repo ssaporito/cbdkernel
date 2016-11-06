@@ -269,14 +269,14 @@ void Schema:: create_index_direct_hash(const std::string& csv_filename, const st
 
         // Compute hash value.
         int_hash = hash_fn(next_key);
-	    fseek(bin_file, int_hash, SEEK_SET);
-	
+        fseek(bin_file, int_hash, SEEK_SET);
+    
         // Write header.
         fwrite(&next_key, sizeof(int), 1, bin_file);
         fwrite(timestamp.c_str(), sizeof(char), TIMESTAMP_SIZE, bin_file);
         fwrite(&id, sizeof(int), 1, bin_file);
-	
-	    ++next_key;
+    
+        ++next_key;
 
         // Write data.
         for(unsigned i = 0; i < metadata.size(); ++i) {
@@ -315,9 +315,9 @@ void Schema::create_index_indirect_hash(const std::string& bin_filename, const s
 
     while(fread(&key, sizeof(int), 1, bin_file)) {
 
-	    // compute hash value
-	    int_hash = hash_fn(key);
-	
+        // compute hash value
+        int_hash = hash_fn(key);
+    
         fwrite(&int_hash, sizeof(size_t), 1, index_file);
         fwrite(&offset, sizeof(int), 1, index_file);
 
@@ -348,7 +348,7 @@ void Schema::load_index_bplus(const std::string& index_filename) {
 }
 
 void Schema::load_index_indirect_hash(const std::string& index_filename) {
-	
+    
     index_hash.clear();
 
     FILE* index_file = fopen(index_filename.c_str(), "rb");
@@ -359,7 +359,7 @@ void Schema::load_index_indirect_hash(const std::string& index_filename) {
 
     while(fread(&key, sizeof(int), 1, index_file)) {
         fread(&offset, sizeof(int), 1, index_file);
-	    
+        
         int_hash = hash_fn(key);
         index_hash.insert(std::make_pair(&int_hash, offset));
     }
@@ -465,12 +465,12 @@ int Schema::search_for_key_direct_hash(int key, const std::string& bin_filename)
     std::size_t int_hash=0;
     std::hash<int> hash_fn;
     fseek(binfile, hash_fn(key), SEEK_CUR); 
-	
+    
     if(fread(&k, sizeof(int), 1, binfile)){
-    	if (k == key) {
-     	 fclose(binfile);
-      	 return int_hash;
-    	}
+        if (k == key) {
+         fclose(binfile);
+         return int_hash;
+        }
     }
           
     fclose(binfile);
@@ -652,6 +652,92 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
             break;
         }
         case NESTED_NEW_INDEX:{
+            FILE* rel1 = fopen(jc.rel1_filename.c_str(), "rb");
+            FILE* rel2 = fopen(jc.rel2_filename.c_str(), "rb");
+            FILE* ind1 = fopen("../data/csv/schema_test1.index","wb");
+            FILE* ind2 = fopen("../data/csv/schema_test2.index","wb");
+            bool indexload = false;
+            std::vector<std::pair<char*,int>> index_map1;
+            std::vector<std::pair<char*,int>> index_map2;
+
+
+            std::vector<int> pos_vec;
+                        
+            int offset1=column_offset.at(jc.field_name);
+            int offset2=schema2.get_column_offset().at(jc.field_name);
+
+            int index1=column_index.at(jc.field_name);
+            int index2=schema2.get_column_index().at(jc.field_name);
+                       
+
+            fseek(rel1,0,SEEK_END);
+            int rel_size1 = ftell(rel1);
+
+            fseek(rel2,0,SEEK_END);
+            int rel_size2 = ftell(rel2);
+
+            int pos1=0; 
+            fseek(rel1,0,SEEK_SET);            
+            while(pos1<rel_size1) {
+                int row_pos1=pos1;
+                pos1+=get_header_size();
+                fseek(rel1,pos1+offset1,SEEK_SET);
+                int column_size1=atoi(metadata[index1].first.c_str()+1);            
+                char* value1=(char*)malloc(sizeof(char)*column_size1);                
+                fread(value1,sizeof(char),column_size1,rel1);
+                fwrite(value1,sizeof(char),column_size1,ind1);
+                fwrite(&row_pos1,sizeof(int),1,ind1);
+                index_map1.push_back(std::make_pair(value1,row_pos1));
+                int pos2=0;
+                fseek(rel2,0,SEEK_SET);
+                bool found_joinable=false;
+                if(!indexload){
+                    while(pos2<rel_size2){
+
+                        int row_pos2=pos2;
+                        pos2+=schema2.get_header_size();
+                        fseek(rel2,pos2+offset2,SEEK_SET);
+                        int column_size2=atoi(schema2.get_metadata()[index2].first.c_str()+1);            
+                        char* value2=(char*)malloc(sizeof(char)*column_size2);                
+                        fread(value2,sizeof(char),column_size2,rel2);
+                        
+                        fwrite(value2,sizeof(char),column_size2,ind2);
+                        fwrite(&row_pos2,sizeof(int),1,ind2);
+
+                        index_map2.push_back(std::make_pair(value2,row_pos2));
+
+                        if(!strcmp(value1,value2)){
+                            found_joinable=true;
+                            //std::cout<<"Joined "<<value1<<" at positions "<<row_pos1<<","<<row_pos2<<std::endl;
+                            pos_vector.push_back(std::make_pair(row_pos1,row_pos2));
+                        }
+                        //std::cout<<value1<<" "<<value2<<std::endl;
+                        pos2+=schema2.get_data_size();
+                    }  
+                }else{
+                    for(int i=0 ;i < index_map2.size() ; i++){
+                        if(!strcmp(value1,index_map2[i].first)){
+                            found_joinable=true;
+                            //std::cout<<"Joined "<<value1<<" at positions "<<row_pos1<<","<<row_pos2<<std::endl;
+                            pos_vector.push_back(std::make_pair(row_pos1,index_map2[i].second));
+                        }
+                    }
+
+                }   
+
+                if(!found_joinable){
+                    pos_vector.push_back(std::make_pair(row_pos1,-1));
+                }          
+                pos1+=get_data_size();
+
+                indexload=true;
+            }
+
+            fclose(rel1); 
+            fclose(ind1);
+            fclose(rel2);
+            fclose(ind2);          
+
             break;
         }
         case MERGE:{                                                                                  
