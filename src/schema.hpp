@@ -48,9 +48,10 @@ public:
     std::vector<std::pair<int, int> > get_index_map() const;
     std::unordered_map<std::size_t*,int> get_index_hash() const;
     std::string get_filename() const;
+    std::vector<std::string> get_table(const std::string& rel_filename,const std::string& field_name) const; // returns only chosen field
+    std::unordered_map<std::string, std::vector<int>> get_table_map(const std::string& rel_filename,const std::string&field_name) const; // returns only chosen field and row index
     void convert_to_bin(const std::string& csv_filename, const std::string& bin_filename, bool ignore_first_line = true) const;
     void print_binary(const std::string& bin_filename) const;
-    std::vector<std::string> get_table(const std::string& rel_filename,const std::string& field_name) const;
     void create_index(const std::string& bin_filename, const std::string& index_filename) const;
     void create_index_bplus(const std::string& bin_filename, const std::string& index_filename) const;
     void create_index_hash(const std::string& bin_filename, const std::string& index_filename) const;

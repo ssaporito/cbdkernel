@@ -94,6 +94,7 @@ int main(int argc, char *argv[]) {
     {"search-field", no_argument, &operation_flag, OPERATION_SEARCH_FIELD},
     {"load-data", no_argument, &operation_flag, OPERATION_LOAD_DATA},
     {"join", no_argument, &operation_flag, OPERATION_JOIN},
+    {"join-benchmark", no_argument, &operation_flag, OPERATION_JOIN_BENCHMARK},
 
     // Mode options.
     {"schema", required_argument, NULL, 0},
@@ -101,16 +102,16 @@ int main(int argc, char *argv[]) {
     {"schemadb", required_argument, NULL, 0},
     {"in", required_argument, NULL, 'i'},
     {"in2", required_argument, NULL, 0},
-    {"join-type", optional_argument, NULL, 0},
-    {"join-impl", optional_argument, NULL, 0},    
+    {"join-type", required_argument, NULL, 0},
+    {"join-impl", required_argument, NULL, 0},    
     {"out", required_argument, NULL, 'o'},
     {"key", required_argument, NULL, 0},
     {"pos",required_argument,NULL,0},
     {"init_pos", optional_argument,NULL, 0},
-    {"field_name", optional_argument, NULL, 0},
-    {"field_value", optional_argument, NULL, 0},
-    {"indexfile", optional_argument, NULL, 0},
-    {"indexfile2", optional_argument, NULL, 0},
+    {"field_name", required_argument, NULL, 0},
+    {"field_value", required_argument, NULL, 0},
+    {"indexfile", required_argument, NULL, 0},
+    {"indexfile2", required_argument, NULL, 0},
     {"bplusfile", optional_argument, NULL, 0},
 
 
@@ -354,6 +355,55 @@ int main(int argc, char *argv[]) {
       schema1.join(schema2,jc);
 
       break;
+      }
+      case OPERATION_JOIN_BENCHMARK:{
+        schema1 = schemadb.get_schema(schema_id);
+        schema2 = schemadb.get_schema(schema_id2);  
+        Join_Conditions jc;
+        jc.rel1_filename=infile.c_str();
+        jc.rel2_filename=infile2.c_str();
+        jc.field_name=field_name;        
+        jc.type=NATURAL_INNER;
+                
+        std::cout << "mode: natural inner join (nested)" << std::endl; 
+        jc.implementation=NESTED;       
+        BENCHMARK(schema1.join_natural_inner(schema2,jc));
+
+        /*std::cout << "mode: natural inner join (nested with existing index)" << std::endl; 
+        jc.implementation=NESTED_EXISTING_INDEX;
+        schema1.load_index(indexfile);
+        schema2.load_index(indexfile2);
+        BENCHMARK(schema1.join_natural_inner(schema2,jc));*/
+
+        std::cout << "mode: natural inner join (nested with new index)" << std::endl; 
+        jc.implementation=NESTED_NEW_INDEX;       
+        BENCHMARK(schema1.join_natural_inner(schema2,jc));
+
+        std::cout << "mode: natural inner join (merge)" << std::endl; 
+        jc.implementation=MERGE;       
+        BENCHMARK(schema1.join_natural_inner(schema2,jc));
+
+        std::cout << "mode: natural inner join (hash)" << std::endl; 
+        jc.implementation=HASH;       
+        BENCHMARK(schema1.join_natural_inner(schema2,jc));
+
+        std::cout << "mode: natural left join (hash)" << std::endl; 
+        jc.type=NATURAL_LEFT;
+        jc.implementation=HASH;       
+        BENCHMARK(schema1.join_natural_left(schema2,jc));
+
+        std::cout << "mode: natural right join (hash)" << std::endl; 
+        jc.type=NATURAL_RIGHT;
+        jc.implementation=HASH;       
+        BENCHMARK(schema1.join_natural_right(schema2,jc));
+
+        std::cout << "mode: natural full join (hash)" << std::endl; 
+        jc.type=NATURAL_FULL;
+        jc.implementation=HASH;       
+        BENCHMARK(schema1.join_natural_full(schema2,jc));
+
+        std::cout << std::endl;      
+        break;
       }
   }
 

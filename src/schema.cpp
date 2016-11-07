@@ -115,6 +115,62 @@ std::string Schema::get_filename() const {
     return schema_filename;
 }
 
+std::vector<std::string> Schema::get_table(const std::string& rel_filename,const std::string& field_name) const{
+    int offset=column_offset.at(field_name);    
+    int index=column_index.at(field_name);    
+
+    FILE* rel = fopen(rel_filename.c_str(), "rb");
+    fseek(rel,0,SEEK_END);
+    int rel_size = ftell(rel);        
+    int pos=0; 
+    fseek(rel,0,SEEK_SET); 
+    std::vector<std::string> data;                
+    while(pos<rel_size) {        
+        pos+=get_header_size();
+        fseek(rel,pos+offset,SEEK_SET);
+        int column_size=atoi(metadata[index].first.c_str()+1);            
+        char* value=(char*)malloc(sizeof(char)*column_size);               
+        fread(value,sizeof(char),column_size,rel); 
+        //std::cout<<rel_filename<<" "<<value<<std::endl;       
+        data.push_back(value);
+        pos+=get_data_size();
+    }
+    fclose(rel);
+    return data;
+}
+
+std::unordered_map<std::string,std::vector<int>> Schema::get_table_map(const std::string& rel_filename,const std::string& field_name) const{
+    int offset=column_offset.at(field_name);    
+    int index=column_index.at(field_name);    
+
+    FILE* rel = fopen(rel_filename.c_str(), "rb");
+    fseek(rel,0,SEEK_END);
+    int rel_size = ftell(rel);        
+    int pos=0; 
+    fseek(rel,0,SEEK_SET); 
+    std::unordered_map<std::string,std::vector<int>> data;    
+    unsigned i=0;
+    while(pos<rel_size) { 
+        pos+=get_header_size();               
+        fseek(rel,pos+offset,SEEK_SET);
+        int column_size=atoi(metadata[index].first.c_str()+1);            
+        char* value=(char*)malloc(sizeof(char)*column_size);               
+        fread(value,sizeof(char),column_size,rel); 
+        //std::cout<<rel_filename<<" "<<value<<std::endl; 
+        if(data.find(value)!=data.end()){
+            data[value].push_back(i);
+        }   
+        else{
+            std::vector<int> indexes(1,i);
+            data.insert(std::make_pair(value,indexes));            
+        }               
+        i++;
+        pos+=get_data_size();
+    }    
+    fclose(rel);
+    return data;
+}
+
 void Schema::convert_to_bin(const std::string& csv_filename, const std::string& bin_filename, bool ignore_first_line) const {
     std::ifstream csv_file(csv_filename);
     FILE* bin_file = fopen(bin_filename.c_str(), "wb");
@@ -146,11 +202,12 @@ void Schema::convert_to_bin(const std::string& csv_filename, const std::string& 
             if (data.first[0] == 'i') {
                 const int int_token = std::stoi(token);
                 fwrite(&int_token, sizeof(int), 1, bin_file);
-                std::cout<<int_token<<std::endl;
+                //std::cout<<int_token<<std::endl;
             }
             else {
                 // ASSUMES: string.
                 fwrite(token.c_str(), sizeof(char), atoi(data.first.c_str() + 1), bin_file);
+                //std::cout<<token.c_str()<<std::endl;
             }
         }
     }
@@ -173,13 +230,13 @@ void Schema::print_binary(const std::string& bin_filename) const{
                 std::cout<<int_token;
             }
             else{
-                int string_size=atoi(metadata[i].first.c_str()+1);
+                size_t string_size=atoi(metadata[i].first.c_str()+1);
                 char* data_value=(char*)malloc(sizeof(char)*string_size);
                 fread(data_value,sizeof(char),string_size,bin_file);  
                 std::cout<<data_value;  
             }  
             if(i==metadata.size()-1){
-                std::cout<<"\n"<<std::endl;
+                std::cout<<std::endl;
             }   
             else{
                 std::cout<<",";
@@ -188,29 +245,6 @@ void Schema::print_binary(const std::string& bin_filename) const{
     }
     
     fclose(bin_file);
-}
-
-std::vector<std::string> Schema::get_table(const std::string& rel_filename,const std::string& field_name) const{
-    int offset=column_offset.at(field_name);    
-    int index=column_index.at(field_name);    
-
-    FILE* rel = fopen(rel_filename.c_str(), "rb");
-    fseek(rel,0,SEEK_END);
-    int rel_size = ftell(rel);        
-    int pos=0; 
-    fseek(rel,0,SEEK_SET); 
-    std::vector<std::string> data;                
-    while(pos<rel_size) {        
-        pos+=get_header_size();
-        fseek(rel,pos+offset,SEEK_SET);
-        int column_size=atoi(metadata[index].first.c_str()+1);            
-        char* value=(char*)malloc(sizeof(char)*column_size);               
-        fread(value,sizeof(char),column_size,rel);        
-        data.push_back(value);
-        pos+=get_data_size();
-    }
-    fclose(rel);
-    return data;
 }
 
 void Schema::create_index(const std::string& bin_filename, const std::string& index_filename) const {
@@ -516,7 +550,7 @@ void Schema::join(Schema &schema2,Join_Conditions jc){
         case NATURAL_FULL:{
             pos_vector=join_natural_full(schema2,jc);
         }
-    }        
+    }   
     for(unsigned i=0;i<metadata.size();i++){
         std::cout<<metadata[i].second<<",";
     }
@@ -620,7 +654,7 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
                                             
             std::vector<int> pos_vec;
 
-            for(auto i = 0 ; i < index_map.size() ; i++){
+            for(unsigned i = 0 ; i < index_map.size() ; i++){
                
                 int pos1=index_map[i].second+i*4;
                 int row_pos1 = pos1;
@@ -630,7 +664,7 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
                 char* value1=(char*)malloc(sizeof(char)*column_size1);                
                 fread(value1,sizeof(char),column_size1,rel1);
                
-                for(auto j = 0 ; j < schema2.get_index_map().size() ; j++){
+                for(unsigned j = 0 ; j < schema2.get_index_map().size() ; j++){
 
                     int pos2 = schema2.get_index_map()[j].second+i*4;
                     int row_pos2=pos2;
@@ -715,7 +749,7 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
                         pos2+=schema2.get_data_size();
                     }  
                 }else{
-                    for(int i=0 ;i < index_map2.size() ; i++){
+                    for(unsigned i=0 ;i < index_map2.size() ; i++){
                         if(!strcmp(value1,index_map2[i].first)){
                             found_joinable=true;
                             //std::cout<<"Joined "<<value1<<" at positions "<<row_pos1<<","<<row_pos2<<std::endl;
@@ -776,6 +810,30 @@ std::vector<std::pair<int,int>> Schema::join_natural_left(Schema &schema2,Join_C
             break;
         }
         case HASH:{
+            std::vector<std::string> data1;          
+            std::unordered_map<std::string, std::vector<int>> data2;             
+            data1=this->get_table(jc.rel1_filename,jc.field_name); // vector
+            data2=schema2.get_table_map(jc.rel2_filename,jc.field_name); // hashmap
+            /*for(auto k:data2){
+                std::cout<<k.first<<":";
+                for(auto j:k.second){
+                    std::cout<<j<<",";
+                } 
+                std::cout<<std::endl;       
+            }*/
+            /*for(unsigned i=0;i<data1.size();i++){
+                std::cout<<data1[i]<<std::endl;
+            }*/
+            for(unsigned i=0;i<data1.size();i++){
+                if(data2.find(data1[i])!=data2.end()){
+                    for(auto idx:data2[data1[i]]){
+                        pos_vector.push_back(std::make_pair(i*(get_row_size()),idx*schema2.get_row_size()));
+                    }                    
+                }
+                else{
+                    pos_vector.push_back(std::make_pair(i*(get_row_size()),-1));
+                }
+            }            
             break;
         }
         default:{
@@ -812,4 +870,3 @@ std::vector<std::pair<int,int>> Schema::join_natural_full(Schema &schema2,Join_C
     }
     return pos_vector;
 }
-
